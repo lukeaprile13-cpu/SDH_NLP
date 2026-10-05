@@ -172,7 +172,16 @@ def main():
     gold = pd.read_csv(args.gold, dtype=str).dropna(how="all")
     gold.columns = [c.strip() for c in gold.columns]
     gold["report_num"] = gold["report_num"].str.strip()
-    gold = gold.set_index("report_num")
+
+    # the same report number can appear twice for different reports;
+    # when both files have the "#" column, match on that instead
+    key_column = "report_num"
+    if "#" in gold.columns and "#" in reports.columns and gold["report_num"].duplicated().any():
+        key_column = "#"
+        number_column = "#"
+        gold["#"] = gold["#"].str.strip()
+
+    gold = gold.set_index(key_column)
 
     # use whichever name this sheet has; fields the sheet does not have are skipped
     columns = {}

@@ -33,6 +33,32 @@ tentorial / falcine bleed kept off the convexity, "small volume of ... blood"
 not taken as the SDH size, density words about the parenchyma / thyroid not
 given to the SDH.
 
+## Test on 13 more new reports (third batch)
+
+| | Recall | Precision |
+|---|---:|---:|
+| Original notebook | 35% | 58% |
+| New rules, **before seeing these reports** | **68%** | **72%** |
+| After fixes (incl. phrases supplied by the labeller) | 86% | 80% |
+
+Across the two unseen batches the honest score is about **70-75%** on reports the
+rules have never seen. Fixes from this batch: one-line COMPARISON / TECHNIQUE
+sections, "-RIGHT: / -LEFT:" list labels, "Right subdural, 1.0 cm", "was 14 mm and is
+now 15 mm", "On the left, this measures ...", "mass-effect", "compressed", "bowing of
+the midline", "the midline is intact", "panhemispheric", "massive", "falco tentorial",
+"interhemispheric fissure", glued side words ("rightinterhemispheric"), soft tissue
+hematomas kept out of the SDH, "no hemorrhage in the basilar cisterns" = no SAH,
+"history of ..." sentences skipped, facial vs skull fractures, "minimal" as a size,
+"mixed densities", "more than one compartment" / "multi septated" = septations,
+an acute / high-density part on a low-density or chronic background = acute on
+chronic, "subacute and chronic components" = subacute on chronic, de-identification
+names in "X-white differentiation", and words between two bleeds in one sentence
+given to the right one.
+
+Labelling conventions that differ between the sheets (worth agreeing on):
+"No fracture" is `skull_fracture` on the first sheet but `bony_lesion` on the
+later ones; `midline_shift_present` is sometimes left blank when a size is given.
+
 ## What the original code did well
 - Dictionary + PhraseMatcher tokenising, and the association parser for effects joined by
   "with": mass effect, sulcal / ventricular effacement, subfalcine / uncal herniation and
