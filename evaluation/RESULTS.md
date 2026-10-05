@@ -59,6 +59,22 @@ Labelling conventions that differ between the sheets (worth agreeing on):
 "No fracture" is `skull_fracture` on the first sheet but `bony_lesion` on the
 later ones; `midline_shift_present` is sometimes left blank when a size is given.
 
+## Labelling decisions applied (from the conventions worksheet)
+
+- Fractures use the new variables: `bony_lesion`, `calvarial_ / skullbase_ / facial_fracture_present`,
+  `_comminuted`, `_depressed`. Any fracture = `bony_lesion` Yes; the bone named picks the group;
+  "No ... fracture" / "calvarium intact" = No for the bone named and `bony_lesion` No.
+  `skull_fracture` is gone (the first sheet's `skull_fracture` column is scored as `calvarial_fracture_present`).
+- Parafalcine / tentorial bleeds are separate from the convexity SDH: their size only goes to
+  `parafalcine_ / tentorium_thickness`, and a sentence only about them gives nothing to L_ / R_.
+  "This hematoma extends to ... the falx" right after a tentorial bleed is the same bleed.
+- Atrophy / microangiopathy / hydrocephalus with no grade = Yes NS.
+- A midline shift with a size is at least Yes NS; the adjective directly in front gives the grade.
+- Cistern effacement variables removed.
+
+Scores after these changes (old sheets still use some old conventions, e.g. fractures):
+first 50: 89% / 91%, second batch: 90% / 81%, third batch: 87% / 81%.
+
 ## What the original code did well
 - Dictionary + PhraseMatcher tokenising, and the association parser for effects joined by
   "with": mass effect, sulcal / ventricular effacement, subfalcine / uncal herniation and

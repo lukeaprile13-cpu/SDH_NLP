@@ -57,14 +57,16 @@ FIELDS = {
     "effacement_ventricular_system": "effacement_ventricular_system",
     "effacement_lateral_ventricle": "effacement_lateral_ventricle", "l_ventricle_laterality": "l_ventricle_laterality",
     "ventricular_prominence": "l_ventricular_prominence", "ex_vacuo_dilatation": "ex_vacuo_ventriculomegaly",
-    "effacement_cisterns": "effacement_basal_cistern",
     "herniation_subfalcine": "herniation_subfalcine", "herniation_uncal": "herniation_uncal",
     "herniation_transtentorial": "herniation_transtentorial", "herniation_tonsillar": "herniation_tonsillar",
     "hydrocephalus": "hydrocephalus", "microangiopathy": "microangiopathy", "cerebral_atrophy": "cerebral_atrophy",
     "white_dark_differentiation": "white_dark_differentiation", "mass": "mass",
     "territorial_infarct": "territorial_ infarct", "lacunar_infarct": "lacune_infarct",
     "unspecified_infarct": "unspecified__infarct",
-    "bony_lesion": "bony_lesion", "skull_fracture": "skull_fracture", "scalp_hematoma": "scalp_hematoma",
+    "bony_lesion": "bony_lesion",
+    "calvarial_fracture_present": "calvarial_fracture_present",
+    "skullbase_fracture_present": "skullbase_fracture_present",
+    "facial_fracture_present": "facial_fracture_present", "scalp_hematoma": "scalp_hematoma",
     "soft_tissue_lesion": "soft_tissue_lesion", "orbital_lesion": "orbital_lesion",
     "subarachnoid_hemorrhage": "subarachnoid_hemorrhage", "intraparenchymal_hemorrhage": "intraparenchymal_hemorrhage",
     "intraventricular_hemorrhage": "intraventricular_hemorrhage",
@@ -75,7 +77,8 @@ FIELDS = {
 COLUMN_ALIASES = {
     "R_density_uniformity": ["R_mixed_density"],
     "intraparenchymal_hemorrhage": ["parenchymal_hemorrhage"],
-    "skull_fracture": ["calvarial_fracture_present"],
+    # the first sheet's "skull_fracture" column is the calvarium
+    "calvarial_fracture_present": ["skull_fracture"],
 }
 
 REPORT_NUMBER_COLUMNS = ["report_num", "report #", "report_number"]
