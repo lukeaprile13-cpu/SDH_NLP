@@ -61,10 +61,12 @@ later ones; `midline_shift_present` is sometimes left blank when a size is given
 
 ## Labelling decisions applied (from the conventions worksheet)
 
-- Fractures use the new variables: `bony_lesion`, `calvarial_ / skullbase_ / facial_fracture_present`,
-  `_comminuted`, `_depressed`. Any fracture = `bony_lesion` Yes; the bone named picks the group;
-  "No ... fracture" / "calvarium intact" = No for the bone named and `bony_lesion` No.
-  `skull_fracture` is gone (the first sheet's `skull_fracture` column is scored as `calvarial_fracture_present`).
+- Fractures use three variables: `bony_lesion` (any fracture = Yes, "No ... fracture" = No),
+  `fracture_location` (Calvarial / Skull base / Facial, joined with " + " when several; "No skull
+  fracture" or "calvarium intact" = No; "No fracture" with no bone named = NR, cleaned downstream) and
+  `fracture_type` (most severe said: Comminuted > Depressed > Displaced > Nondisplaced).
+  Older sheets' per-bone columns (`skull_fracture`, `calvarial_ / skullbase_ / facial_fracture_present`)
+  are converted to `fracture_location` for scoring.
 - Parafalcine / tentorial bleeds are separate from the convexity SDH: their size only goes to
   `parafalcine_ / tentorium_thickness`, and a sentence only about them gives nothing to L_ / R_.
   "This hematoma extends to ... the falx" right after a tentorial bleed is the same bleed.

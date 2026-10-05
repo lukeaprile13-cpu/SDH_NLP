@@ -64,9 +64,7 @@ FIELDS = {
     "territorial_infarct": "territorial_ infarct", "lacunar_infarct": "lacune_infarct",
     "unspecified_infarct": "unspecified__infarct",
     "bony_lesion": "bony_lesion",
-    "calvarial_fracture_present": "calvarial_fracture_present",
-    "skullbase_fracture_present": "skullbase_fracture_present",
-    "facial_fracture_present": "facial_fracture_present", "scalp_hematoma": "scalp_hematoma",
+    "fracture_location": "fracture_location", "scalp_hematoma": "scalp_hematoma",
     "soft_tissue_lesion": "soft_tissue_lesion", "orbital_lesion": "orbital_lesion",
     "subarachnoid_hemorrhage": "subarachnoid_hemorrhage", "intraparenchymal_hemorrhage": "intraparenchymal_hemorrhage",
     "intraventricular_hemorrhage": "intraventricular_hemorrhage",
@@ -77,8 +75,6 @@ FIELDS = {
 COLUMN_ALIASES = {
     "R_density_uniformity": ["R_mixed_density"],
     "intraparenchymal_hemorrhage": ["parenchymal_hemorrhage"],
-    # the first sheet's "skull_fracture" column is the calvarium
-    "calvarial_fracture_present": ["skull_fracture"],
 }
 
 REPORT_NUMBER_COLUMNS = ["report_num", "report #", "report_number"]
@@ -131,6 +127,24 @@ def norm(field, value):
         return "clear" if value in ("well aerated", "unremarkable", "clear", "normal") else value
 
     return EQUIV.get(value, value)
+
+
+def fracture_location_from_old_columns(row):
+    """
+    Older sheets have one column per bone (skull_fracture, calvarial_ /
+    skullbase_ / facial_fracture_present); turn them into fracture_location.
+    """
+    if row.get("fracture_location") not in (None, "") and str(row.get("fracture_location")) != "nan":
+        return row.get("fracture_location")
+    names = [("calvarial_fracture_present", "Calvarial"), ("skull_fracture", "Calvarial"),
+             ("skullbase_fracture_present", "Skull base"), ("facial_fracture_present", "Facial")]
+    values = {label: str(row.get(col, "")).strip().lower() for col, label in names if col in row}
+    found = [label for label in ("Calvarial", "Skull base", "Facial") if values.get(label) == "yes"]
+    if found:
+        return " + ".join(found)
+    if any(v == "no" for v in values.values()):
+        return "No"
+    return None
 
 
 def to_mm(row, mm_key, cm_key):
@@ -190,7 +204,7 @@ def main():
     columns = {}
     for field, column in FIELDS.items():
         for name in [column] + COLUMN_ALIASES.get(column, []):
-            if name in gold.columns or name in ("L_thickness", "R_thickness", "midline_shift"):
+            if name in gold.columns or name in ("L_thickness", "R_thickness", "midline_shift", "fracture_location"):
                 columns[field] = name
                 break
 
@@ -213,6 +227,7 @@ def main():
             row["L_thickness"] = to_mm(row, "L_thickness_mm", "L_thickness_cm")
             row["R_thickness"] = to_mm(row, "R_thickness_mm", "R_thickness_cm")
             row["midline_shift"] = to_mm(row, "midline_shift_mm", "midline_shift_cm")
+        human["fracture_location"] = fracture_location_from_old_columns(human)
 
         for field, column in columns.items():
 
