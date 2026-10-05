@@ -12,6 +12,27 @@ in mm whichever unit the report used. Vocabulary-only differences ("Mixed" vs "Y
 
 Recall = human values the code reproduced. Precision = code values that match the human.
 
+## Test on 9 new reports (not used to write the rules)
+
+| | Recall | Precision |
+|---|---:|---:|
+| Original notebook | 35% | 57% |
+| New rules, **before seeing these reports** (honest held-out score) | **74%** | **75%** |
+| After fixing the misses they showed | 89% | 81% |
+
+The middle row is the one to quote: it is how the code did on reports it had never
+seen. The last row is no longer a fair test, because those 9 reports were then used
+to add rules (the first 50 stayed at 91% / 92%, so nothing regressed).
+
+Fixes from the new reports: "midline shift**s**", "shift of the septum pellucidum",
+"partially effaced", "lateral and third ventricles", keys containing "/"
+("acute/subacute", "gray/white") were never merged by the phrase matcher,
+broken words with a real right half ("hemorrh age"), sinus sentences that also
+mention a fracture, normal anatomy said before a negation, acuity of a
+tentorial / falcine bleed kept off the convexity, "small volume of ... blood"
+not taken as the SDH size, density words about the parenchyma / thyroid not
+given to the SDH.
+
 ## What the original code did well
 - Dictionary + PhraseMatcher tokenising, and the association parser for effects joined by
   "with": mass effect, sulcal / ventricular effacement, subfalcine / uncal herniation and

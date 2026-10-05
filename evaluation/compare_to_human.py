@@ -71,8 +71,19 @@ FIELDS = {
     "paranasal_sinuses": "paranal_sinuses", "mastoid_air_cells": "mastoid_air_cells",
 }
 
+# other names the human sheet has used for the same column
+COLUMN_ALIASES = {
+    "R_density_uniformity": ["R_mixed_density"],
+    "intraparenchymal_hemorrhage": ["parenchymal_hemorrhage"],
+    "skull_fracture": ["calvarial_fracture_present"],
+}
+
+REPORT_NUMBER_COLUMNS = ["report_num", "report #", "report_number"]
+REPORT_TEXT_COLUMNS = ["full _report", "full_report", "report"]
+
 # wording differences that are not extraction errors
-EQUIV = {"dependent": "dependant", "mixed": "yes ns", "yes": "yes ns", "preserved": "yes ns"}
+EQUIV = {"dependent": "dependant", "mixed": "yes ns", "yes": "yes ns", "preserved": "yes ns",
+         "acute and subacute": "acute/subacute"}
 
 
 def load_notebook(path):
@@ -154,16 +165,29 @@ def main():
     else:
         reports = pd.read_csv(args.reports, dtype=str)
 
+    reports.columns = [c.strip() for c in reports.columns]
+    number_column = next(c for c in REPORT_NUMBER_COLUMNS if c in reports.columns)
+    text_column = next(c for c in REPORT_TEXT_COLUMNS if c in reports.columns)
+
     gold = pd.read_csv(args.gold, dtype=str).dropna(how="all")
+    gold.columns = [c.strip() for c in gold.columns]
     gold["report_num"] = gold["report_num"].str.strip()
     gold = gold.set_index("report_num")
+
+    # use whichever name this sheet has; fields the sheet does not have are skipped
+    columns = {}
+    for field, column in FIELDS.items():
+        for name in [column] + COLUMN_ALIASES.get(column, []):
+            if name in gold.columns or name in ("L_thickness", "R_thickness", "midline_shift"):
+                columns[field] = name
+                break
 
     stats = {field: dict(ok=0, wrong=0, missed=0, extra=0) for field in FIELDS}
     differences = []
 
     for _, report in reports.iterrows():
 
-        number = str(report["report_num"]).strip()
+        number = str(report[number_column]).strip()
 
         if number not in gold.index:
             continue
@@ -171,14 +195,14 @@ def main():
         human = gold.loc[number].to_dict()
 
         with contextlib.redirect_stdout(io.StringIO()):
-            code = dict(g["run_report"](str(report["full _report"])))
+            code = dict(g["run_report"](str(report[text_column])))
 
         for row in (human, code):
             row["L_thickness"] = to_mm(row, "L_thickness_mm", "L_thickness_cm")
             row["R_thickness"] = to_mm(row, "R_thickness_mm", "R_thickness_cm")
             row["midline_shift"] = to_mm(row, "midline_shift_mm", "midline_shift_cm")
 
-        for field, column in FIELDS.items():
+        for field, column in columns.items():
 
             h, c = norm(field, human.get(column)), norm(field, code.get(field))
 
@@ -202,6 +226,8 @@ def main():
 
     rows = []
     for field, s in stats.items():
+        if field not in columns:
+            continue
         labelled = s["ok"] + s["wrong"] + s["missed"]
         emitted = s["ok"] + s["wrong"] + s["extra"]
         rows.append(dict(
