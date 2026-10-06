@@ -184,3 +184,14 @@ so a rule that matches one report breaks another, e.g.
   and lowered the overall score, so the code only records what is written;
 - side-less sulcal effacement is sometimes given the SDH side, usually not — the code only
   uses a side that is written ("left", "ipsilateral", "both").
+
+## Final variable schema
+
+The batch output (`run_csv`) uses the final study variable list, as set in the FINAL OUTPUT VARIABLES cell:
+- density dominance and thickness_max were removed;
+- loculated / loculation / multiloculated map to **Septations**;
+- SAH is graded (Mild / Moderate / Severe / Scattered);
+- new columns: aneurysm, encephalomalacia, parafalcine_location and per-sinus columns (sphenoid / ethmoid / maxillary);
+- `fracture_location` is joined with " & " (e.g. "Calvarial & Skull base").
+
+The scores above use the older sheet column names; with the new grading they are 89%/91% (first 50), 91%/82% (batch 9) and 86%/80% (batch 13).

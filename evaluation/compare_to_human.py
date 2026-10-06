@@ -31,7 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RUN_CELL_MARKERS = re.compile(
     r'^(!\{sys\.executable\}|print\(sys\.executable\)|report = """|'
     r"sentence_lists = tokenize_report\(report\)|main_tree = orchestrator\(|"
-    r"final_variables = master_variable_mapping_function\()",
+    r"final_variables = master_variable_mapping_function\(|results = run_csv\()",
     re.MULTILINE,
 )
 
