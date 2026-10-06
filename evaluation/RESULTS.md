@@ -188,7 +188,8 @@ so a rule that matches one report breaks another, e.g.
 ## Final variable schema
 
 The batch output (`run_csv`) uses the final study variable list, as set in the FINAL OUTPUT VARIABLES cell:
-- density dominance and thickness_max were removed;
+- thickness_max was removed;
+- `L_/R_density_dominance` (Hypodense / Isodense / Hyperdense / Hypo/Isodense / Iso/Hyperdense) is filled only when the report says which density dominates: "predominantly", "largely", "mostly", "mainly", "primarily" or "background of", followed by density words ("predominantly hypo to isodense" → Hypo/Isodense). It matches 3 of the 4 values on the old sheet; the miss is "small acute and larger chronic component", where no density word is given;
 - loculated / loculation / multiloculated map to **Septations**;
 - SAH is graded (Mild / Moderate / Severe / Scattered);
 - new columns: aneurysm, encephalomalacia, parafalcine_location and per-sinus columns (sphenoid / ethmoid / maxillary);
