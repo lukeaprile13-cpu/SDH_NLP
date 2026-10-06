@@ -22,4 +22,7 @@ The example report cells at the end of the notebook still show the step-by-step 
 
 ## Checking against human extraction
 
-See `evaluation/compare_to_human.py` and `evaluation/RESULTS.md`.
+- Sheets with the final variable names (one row per report, same columns as `SDH_results.csv`): `python evaluation/compare_final.py --sheet your_sheet.xlsx`
+- Older sheets: `evaluation/compare_to_human.py`
+
+Results and the rules added are in `evaluation/RESULTS.md`.

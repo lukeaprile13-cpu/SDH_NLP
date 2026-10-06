@@ -196,3 +196,42 @@ The batch output (`run_csv`) uses the final study variable list, as set in the F
 - `fracture_location` is joined with " & " (e.g. "Calvarial & Skull base").
 
 The scores above use the older sheet column names; with the new grading they are 89%/91% (first 50), 91%/82% (batch 9) and 86%/80% (batch 13).
+
+## Last development batch (15 reports, final variable names)
+
+Scored with `evaluation/compare_final.py`, which compares the notebook's final output with a sheet that uses the final column names.
+
+| | recall | precision |
+|---|---|---|
+| before the new rules | 85% | 86% |
+| after | 95% | 92% |
+
+The older sheets did not get worse: first 50 at 89% / 90%, batch 9 at 92% / 82%, batch 13 at 86% / 79%.
+
+Rules added from the labeller's notes:
+- holohemispheric (or panhemispheric) → the single lobes are not recorded;
+- "more acute component", "trace of more acute blood", "acute bleed on a pre-existing SDH" and "mostly hyperdense with areas of lower density + acute" → acute on chronic;
+- "patchy (areas of) hyperdense" → mixed density;
+- "adjacent sulcal … effacement" → sulcal effacement on the SDH's side;
+- "subfalcine midline shift" → subfalcine herniation (not midline shift);
+- "falcotentorial" → parafalcine (Posterior) + tentorium;
+- "No cerebellar herniation" → tonsillar No;
+- an old / healed fracture → bony_lesion No; `fracture_location` is NR unless there is a fracture;
+- "some patchy opacification" → Mild opacification;
+- "ventricles and sulci are age appropriate / normal" → effacement No;
+- "no (acute) intracranial hemorrhage" → parenchymal, SAH and IVH No; "no new or expanding hemorrhage" → nothing;
+- new `parafalcine_density` column.
+
+Other fixes:
+- "This is / It has …" density sentences continue the last SDH;
+- "SDH with sulcal effacement" (anatomy between "with" and the effect);
+- a comma list ending in one effect;
+- "left ventricular effacement" → left lateral ventricle;
+- "both cerebral hemispheres" → bilateral;
+- hemorrhage in the ventricles / deep nuclei → IVH / parenchymal;
+- "surrounding edema" next to another bleed;
+- scalp soft tissue findings;
+- midline shift ranges take the lower number;
+- "8-9 mm", "3rd ventricle", "satisfactory", "enlargement", "smaller", "abnormalities", "although".
+
+Kept as a switch: `MEASUREMENT_SITE_IS_LOCATION` (True). The lobe named for the place of the measurement ("1.9 cm over the right parietal convexity") is recorded as a location, because every human sheet did so (9 of 9).
