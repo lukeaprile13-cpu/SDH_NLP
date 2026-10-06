@@ -15,6 +15,7 @@
    - `report_num`, `report_index`, `report`
    - `tree`: the parsed tree, before variable mapping
    - every study variable, in the order set by `FINAL_COLUMNS` (FINAL OUTPUT VARIABLES cell)
+   - `review_flag`: why a person should read this report, empty when there is no reason. The code codes what the report says rather than guessing; for now it flags an epidural reported on the same side as a subdural, or an epidural with no side given (e.g. a report calling the same collection "extradural" in the findings and "subdural" in the conclusion)
    - `error`: empty unless that report crashed. A crashed report gets NR everywhere and the run continues.
 
 The example report cells at the end of the notebook still show the step-by-step debug output for one report.
