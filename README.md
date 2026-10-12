@@ -2,23 +2,20 @@
 
 `NLP_v5.ipynb` reads CT head reports and extracts subdural hematoma variables.
 
-## Running a batch of reports
+## Running a batch of reports (and validating)
 
-1. Put `SDH_reports.csv` in the same folder as the notebook. It needs 3 columns, in this order:
-   1. the randomised report number
-   2. a number from 1 to n
-   3. the report text
+1. Put your CSV in the same folder as the notebook. Column A and B: report numbers, column C: the report text, columns D onwards (optional): the human-extracted values, with a header row naming the variables.
+2. In the **SETTINGS** cell (section "RUN ALL REPORTS AND VALIDATE") write the CSV's file name in `INPUT_CSV`.
+3. Menu **Kernel → Restart & Run All**.
 
-   A header row is optional; the columns are read by position.
-2. In Jupyter, choose **Run All**.
-3. The results are written to `SDH_results.csv`, one row per report, with these columns:
-   - `report_num`, `report_index`, `report`
-   - `tree`: the parsed tree, before variable mapping
-   - every study variable, in the order set by `FINAL_COLUMNS` (FINAL OUTPUT VARIABLES cell)
-   - `review_flag`: why a person should read this report, empty when there is no reason. The code codes what the report says rather than guessing; for now it flags an epidural reported on the same side as a subdural, or an epidural with no side given (e.g. a report calling the same collection "extradural" in the findings and "subdural" in the conclusion)
-   - `error`: empty unless that report crashed. A crashed report gets NR everywhere and the run continues.
+Outputs, in the same folder:
+- `SDH_results.csv`: the report numbers, the report, `tree` (before variable mapping), every variable, `review_flag`, `error`.
+- `SDH_validation_summary.csv`: overall accuracy, sensitivity, PPV, F1, specificity and kappa, with 95% CIs.
+- `SDH_validation_by_variable.csv`: the same metrics for each variable.
+- `SDH_validation_mismatches.csv`: every report / variable where the NLP and the human differ.
+- `SDH_validation_confusion.csv`: human value × NLP value counts for each variable.
 
-The example report cells at the end of the notebook still show the step-by-step debug output for one report.
+Set `RUN_VALIDATION = False` to only extract (for a CSV with no human values). Rows without report text are skipped.
 
 ## Checking against human extraction
 
