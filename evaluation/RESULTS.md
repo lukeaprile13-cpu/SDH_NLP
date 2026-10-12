@@ -235,3 +235,42 @@ Other fixes:
 - "8-9 mm", "3rd ventricle", "satisfactory", "enlargement", "smaller", "abnormalities", "although".
 
 Kept as a switch: `MEASUREMENT_SITE_IS_LOCATION` (True). The lobe named for the place of the measurement ("1.9 cm over the right parietal convexity") is recorded as a location, because every human sheet did so (9 of 9).
+
+## First validation set (20 trauma-heavy reports) and the rules it led to
+
+Before: sensitivity 77%, PPV 72%, F1 0.75. The set was mostly trauma CTs (fractures, SAH, contusions, sinus and orbit blood, spine / CTA sections in the same report); the development reports were mostly standalone SDH.
+
+After the rules below: sensitivity 93%, PPV 85%, F1 0.89 (kappa 0.84). These 20 reports are now development data, so this is not a validation result; a fresh set is needed for that. The older sheets did not get worse (first 50 89% / 90%, batch 9 92% / 82%, batch 13 89% / 81%, last 15 94% / 91%).
+
+Rules:
+- other blood is not the SDH:
+  - generic hemorrhage / hematoma in a sinus, orbit, scalp or nasal sentence;
+  - "IVH" / "SAH" / "ICH" abbreviations;
+  - "prior / old hematoma";
+  - "Previously the patient had ...";
+  - side and size words said right before another bleed ("with bilateral SAH", "small volume SAH", "right frontal SAH") belong to that bleed;
+  - words said between another bleed and the SDH ("IVH in the right horn as well as thin acute SDH") wait for the SDH;
+- hemorrhage *in* a lobe / deep nucleus → parenchymal; in the ventricles → IVH; "clot" and "shear hemorrhage" are bleeds; a hemorrhage called a contusion is the contusion;
+- glued words split when both halves are known words ("thicknessof", "foracute", "Stableright", "paranasalsinuses"); "right- sided"; "CSF.Subacute";
+- sinuses read clause by clause; blood / hemorrhagic material / bleeding in a sinus → Hemorrhage; fluid level → Fluid; "near complete" → Severe; marked mucosal thickening → Moderate;
+- fractures:
+  - zygomatic process of the frontal bone → calvarial;
+  - temporomandibular → not facial;
+  - occipital condyle → skull base;
+  - squamous temporal → calvarial, petrous / mastoid → skull base;
+  - base of the pterygoids → skull base;
+  - "This extends into the petrous bone" adds to the fracture before it;
+  - anterior nasal spine is not the spine;
+  - vertebral compression fractures ignored;
+  - fracture type for any bone ("with mild depression" = Depressed);
+- "no worsening mass effect / midline shift" → present (Yes NS); "no other / additional hemorrhage" → NR; "No CT findings for" = no evidence of;
+- a grade before a herniation list grades all of them; "moderate to large" → Large; "3.6 mm anteriorly and posteriorly 1 cm" → the larger; "It was 14 mm and is now 15 mm" → 15 mm;
+- falx / tentorium:
+  - a sentence naming the falx before any lobe is about the falx;
+  - a size word right before the falx is the falx bleed's size;
+  - "frontal parafalcine" → Anterior;
+  - an SDH extending into the falx shares its age;
+  - new `parafalcine_description`, `tentorium_description`, `tentorium_density`;
+- "These are … / Both of these collections" → both sides; "The right measures … and the left measures …" → both thicknesses;
+- also: meningioma / space occupying lesion → mass; periorbital / intraorbital / retrobulbar hematoma → orbital; transforaminal → tonsillar; "large artery territory cortical infarct" → territorial; "from remote trauma or ischemia" is not an infarct; "ischemic microangiopathic" is not an infarct; displacement is not effacement;
+- output columns use the extraction sheet's names and order; `epidural_hemorrhage` and `aneurysm` follow them.

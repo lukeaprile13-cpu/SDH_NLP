@@ -31,19 +31,22 @@ from compare_to_human import load_notebook  # noqa: E402
 REPORT_NUMBER_COLUMNS = ["report_num", "report #", "report_number"]
 REPORT_TEXT_COLUMNS = ["report_whole", "report", "full _report", "full_report"]
 
-# final column  ->  other names a sheet has used for it
+# columns are matched by name after tidying (case, spaces, "_"); these are
+# other names a sheet has used:  sheet name (tidied) -> NLP column
 SHEET_ALIASES = {
-    "L_internal_appearance": ["L_internal_appearence"],
-    "R_internal_appearance": ["R_internal_appearence"],
-    "L_holohemispheric_hematoma": ["L_holohemispheric _ hematoma"],
-    "R_holohemispheric_hematoma": ["R_holohemispheric _ hematoma"],
-    "effacement_lateral_ventricle_laterality": ["l_ventricle_laterality"],
-    "ventricular_prominence": ["l_ventricular_prominence"],
-    "territorial_infarct": ["territorial_ infarct"],
-    "unspecified_infarct": ["unspecified__infarct"],
-    "calvarial_fracture_type": ["fracture_type_ordinal"],
-    "paranasal_sinus": ["paranal_sinuses", "paranasal_sinuses"],
+    "l_internal_appearance": "L_internal_appearence",
+    "r_internal_appearance": "R_internal_appearence",
+    "effacement_lateral_ventricle_laterality": "l_ventricle_laterality",
+    "ventricular_prominence": "l_ventricular_prominence",
+    "calvarial_fracture_type": "fracture_type_ordinal",
+    "paranasal_sinus": "paranal_sinuses",
+    "paranasal_sinuses": "paranal_sinuses",
 }
+
+
+def tidy_name(name):
+    return re.sub(r"[\s_]+", "_", str(name).strip().lower())
+
 
 # measurements are compared once, in mm
 SKIP_COLUMNS = {"L_thickness_cm", "R_thickness_cm", "parafalcine_thickness_cm",
@@ -102,14 +105,13 @@ def main():
 
     final_columns = [name for name, _ in g["FINAL_COLUMNS"]]
 
+    by_tidy = {tidy_name(c): c for c in final_columns}
     columns = {}
-    for column in final_columns:
-        if column in SKIP_COLUMNS:
-            continue
-        for name in [column] + SHEET_ALIASES.get(column, []):
-            if name in sheet.columns:
-                columns[column] = name
-                break
+    for name in sheet.columns:
+        key = tidy_name(name)
+        column = SHEET_ALIASES.get(key) or by_tidy.get(key)
+        if column and column not in SKIP_COLUMNS and column not in columns:
+            columns[column] = name
 
     stats = {column: dict(ok=0, wrong=0, missed=0, extra=0) for column in columns}
     differences = []
