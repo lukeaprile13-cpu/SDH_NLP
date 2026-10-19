@@ -280,4 +280,7 @@ CASES = [
 ("fracture", "Left subdural hematoma. Linear skull fracture through the right parietal bone.", dict(bony_lesion="Yes", fracture_type_ordinal="Linear")),
 ("location", "19 mm right subdural hematoma. Additional tiny subdural hemorrhage in the right parafalcine area anteriorly and posteriorly.", dict(parafalcine_location="Anterior/posterior")),
 ("sinus", "Left subdural hematoma. The paranasal sinuses document minimal inflammatory changes in the maxillary sinuses bilaterally.", dict(maxillary_sinus="Mild mucosal thickening")),
+("pathology", "Left subdural hematoma. Periventricular hypodensities in both cerebral hemispheres and these may be due to infarctions, small vessel ischemic or other white matter disease.", dict(microangiopathy="Yes NS", unspecified__infarct="NR")),
+("pathology", "Left subdural hematoma. Hypodensity in the left frontal lobe which may represent an acute infarct or edema.", dict(unspecified__infarct="NR")),
+("pathology", "Left subdural hematoma. Chronic left MCA territory infarct.", {"territorial_ infarct": "Yes Chronic"}),
 ]
