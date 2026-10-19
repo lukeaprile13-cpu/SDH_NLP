@@ -283,4 +283,11 @@ CASES = [
 ("pathology", "Left subdural hematoma. Periventricular hypodensities in both cerebral hemispheres and these may be due to infarctions, small vessel ischemic or other white matter disease.", dict(microangiopathy="Yes NS", unspecified__infarct="NR")),
 ("pathology", "Left subdural hematoma. Hypodensity in the left frontal lobe which may represent an acute infarct or edema.", dict(unspecified__infarct="NR")),
 ("pathology", "Left subdural hematoma. Chronic left MCA territory infarct.", {"territorial_ infarct": "Yes Chronic"}),
+("fracture", "Left subdural hematoma. Acute fracture of the petrous temporal bone.", dict(bony_lesion="Yes", fracture_location="Skull base")),
+("fracture", "Left subdural hematoma. Acute fracture of the cribriform plate.", dict(bony_lesion="Yes", fracture_location="Skull base")),
+("fracture", "Left subdural hematoma. Acute fracture of the sella turcica.", dict(bony_lesion="Yes", fracture_location="Skull base")),
+("fracture", "Left subdural hematoma. Acute fracture of the mandibular condyle.", dict(bony_lesion="Yes", fracture_location="Facial")),
+("fracture", "Left subdural hematoma. Acute fracture of the occipital condyle.", dict(bony_lesion="Yes", fracture_location="Skull base")),
+("fracture", "Left subdural hematoma. Acute fracture of the hard palate.", dict(bony_lesion="Yes", fracture_location="Facial")),
+("fracture", "Left subdural hematoma. Acute fracture of the squamous temporal bone.", dict(bony_lesion="Yes", fracture_location="Calvarial")),
 ]
