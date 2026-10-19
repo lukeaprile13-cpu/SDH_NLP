@@ -60,7 +60,8 @@ SAME = {
     "yes": "yes ns",              # graded columns: plain Yes = Yes NS
     "muscal thickening ns": "mucosal thickening ns",
     "dependent": "dependant",
-    "unremarkable": "well aerated",
+    "unremarkable": "clear",
+    "well aerated": "clear",
 }
 
 
