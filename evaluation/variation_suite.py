@@ -189,7 +189,7 @@ CASES = [
 ("negation", "Left subdural hematoma. Hydrocephalus is absent.", dict(hydrocephalus="No")),
 ("negation", "Left subdural hematoma. Negative for hydrocephalus.", dict(hydrocephalus="No")),
 ("negation", "Left subdural hematoma. Hydrocephalus is not identified.", dict(hydrocephalus="No")),
-("negation", "Left subdural hematoma. Hydrocephalus has resolved.", dict(hydrocephalus="NR")),
+("negation", "Left subdural hematoma. Hydrocephalus has resolved.", dict(hydrocephalus="No")),
 ("negation", "Left subdural hematoma. There is mild hydrocephalus.", dict(hydrocephalus="Mild")),
 ("negation", "Left subdural hematoma. No acute infarct, mass or hydrocephalus.", dict(hydrocephalus="No", mass="No", unspecified__infarct="No Acute")),
 # ------------------------------------------------------------ other bleeds
@@ -249,7 +249,7 @@ CASES = [
 ("change", "Interval decrease in size of the left subdural hematoma, now measuring 8 mm.", dict(laterality="Left", L_thickness_mm="8")),
 ("change", "Left subdural hematoma. No worsening midline shift.", dict(midline_shift_present="Yes NS")),
 ("change", "Left subdural hematoma. Stable 5 mm rightward midline shift.", dict(midline_shift_mm="5", midline_shift_direction="Right")),
-("change", "Left subdural hematoma. Resolved midline shift.", dict(midline_shift_present="NR")),
+("change", "Left subdural hematoma. Resolved midline shift.", dict(midline_shift_present="No")),
 # ------------------------------------------------------------ uncertainty / not SDH
 ("not sdh", "No subdural hematoma.", dict(laterality="NR")),
 ("not sdh", "No acute intracranial hemorrhage.", dict(laterality="NR", subarachnoid_hemorrhage="No")),
@@ -298,4 +298,12 @@ CASES = [
 ("fracture", "No clear calvarial fracture.", dict(bony_lesion="No")),
 ("mass effect", "Left subdural hematoma. No shift.", dict(midline_shift_present="No")),
 ("not sdh", "No inferior herniation of the left inferior rectus muscle.", dict(herniation_uncal="NR")),
+("fracture", "Left subdural hematoma. Fracture of the left orbital roof.", dict(fracture_location="Skull base")),
+("fracture", "Left subdural hematoma. Fracture of the anterior table of the frontal sinus.", dict(fracture_location="Facial")),
+("fracture", "Left subdural hematoma. Fracture of the posterior table of the frontal sinus.", dict(fracture_location="Skull base")),
+("fracture", "Left subdural hematoma. Fracture of the left ethmoid air cells.", dict(fracture_location="Facial")),
+("change", "Right subdural hematoma. The previous midline shift has resolved.", dict(midline_shift_present="No")),
+("change", "Right subdural hematoma. Interval resolution of the subarachnoid hemorrhage.", dict(subarachnoid_hemorrhage="No")),
+("change", "Right subdural hematoma. The midline shift has partially resolved.", dict(midline_shift_present="Yes NS")),
+("thickness", "Acute right subdural hematoma along the falx and the right frontal convexity, measuring 6 mm in thickness.", dict(R_thickness_mm=6.0, parafalcine_thickness_mm="NR")),
 ]
