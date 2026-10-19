@@ -193,7 +193,7 @@ CASES = [
 ("negation", "Left subdural hematoma. There is mild hydrocephalus.", dict(hydrocephalus="Mild")),
 ("negation", "Left subdural hematoma. No acute infarct, mass or hydrocephalus.", dict(hydrocephalus="No", mass="No", unspecified__infarct="No Acute")),
 # ------------------------------------------------------------ other bleeds
-("other bleeds", "Left subdural hematoma. There is also a small amount of subarachnoid hemorrhage.", dict(subarachnoid_hemorrhage="Mild", laterality="Left")),
+("other bleeds", "Left subdural hematoma. There is also a small amount of subarachnoid hemorrhage.", dict(subarachnoid_hemorrhage="Yes", laterality="Left")),
 ("other bleeds", "Left subdural hematoma. There is also traumatic subarachnoid hemorrhage in the left sylvian fissure.", dict(subarachnoid_hemorrhage="Yes")),
 ("other bleeds", "Left subdural hematoma. Small volume of intraventricular hemorrhage.", dict(intraventricular_hemorrhage="Yes")),
 ("other bleeds", "Left subdural hematoma. Small left frontal intraparenchymal hemorrhage.", dict(parenchymal_hemorrhage="Yes", L_frontal_lobe="NR")),
@@ -290,4 +290,12 @@ CASES = [
 ("fracture", "Left subdural hematoma. Acute fracture of the occipital condyle.", dict(bony_lesion="Yes", fracture_location="Skull base")),
 ("fracture", "Left subdural hematoma. Acute fracture of the hard palate.", dict(bony_lesion="Yes", fracture_location="Facial")),
 ("fracture", "Left subdural hematoma. Acute fracture of the squamous temporal bone.", dict(bony_lesion="Yes", fracture_location="Calvarial")),
+("uncertain", "Possible small epidural hematoma along the right temporal bone.", dict(epidural_hemorrhage="Yes")),
+("uncertain", "Suspect subtle subarachnoid hemorrhage in the right frontal lobe.", dict(subarachnoid_hemorrhage="Yes")),
+("uncertain", "Questionable small contusion in the right frontal lobe.", dict(parenchymal_contusion_present="Yes")),
+("other bleeds", "Left subdural hematoma. Diffuse subarachnoid hemorrhage.", dict(subarachnoid_hemorrhage="Yes")),
+("fracture", "Scalp hematoma but no skull fracture.", dict(bony_lesion="No")),
+("fracture", "No clear calvarial fracture.", dict(bony_lesion="No")),
+("mass effect", "Left subdural hematoma. No shift.", dict(midline_shift_present="No")),
+("not sdh", "No inferior herniation of the left inferior rectus muscle.", dict(herniation_uncal="NR")),
 ]
