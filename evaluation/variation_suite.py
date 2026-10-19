@@ -262,4 +262,11 @@ CASES = [
 ("location", "Status post left craniotomy for subdural hematoma evacuation. Small residual left subdural collection measuring 4 mm.", dict(laterality="Left", L_thickness_mm="4")),
 ("not sdh", "No definite subdural hematoma.", dict(laterality="NR")),
 ("pathology", "There is underlying moderate atrophy and periventricular white matter ischemia.", dict(microangiopathy="NR", unspecified__infarct="NR", cerebral_atrophy="Moderate")),
+("other bleeds", "There is subarachnoid and subdural hemorrhage seen involving the left temporal area extending superiorly into the left frontal region.", dict(laterality="Left", subarachnoid_hemorrhage="Yes", L_frontal_lobe="Yes", L_temporal_lobe="Yes")),
+("sinus", "Left subdural hematoma. There are inflammatory changes within the left maxillary sinus.", dict(maxillary_sinus="Mucosal thickening NS")),
+("morphology", "Laminar acute blood products over the left parietal region.", dict(L_internal_appearence="NR", L_mixed_density="NR", L_hyperdense="Yes")),
+("density", "There is a hypoechoic left subdural collection.", dict(L_hypodense="Yes")),
+("density", "There is a hyperechoic left subdural collection.", dict(L_hyperdense="Yes")),
+("effacement", "Left subdural hematoma which is responsible for severe mass effect with compression of the left cerebral hemisphere, left lateral ventricle, subfalcine and early transtentorial herniation.", dict(effacement_sulci="NR", mass_effect_present="Severe", herniation_transtentorial="Mild")),
+("other bleeds", "Left subdural hematoma. No intraaxial hemorrhage.", dict(parenchymal_hemorrhage="No", intraventricular_hemorrhage="No", subarachnoid_hemorrhage="NR")),
 ]
