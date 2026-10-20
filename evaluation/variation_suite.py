@@ -354,4 +354,7 @@ CASES = [
 ("acuity", "Left subdural hematoma along the left frontal convexity measuring up to 0.8 cm. Hyperdensity in keeping with ongoing acute component.", dict(L_acuity="Acute on chronic", L_mixed_density="Yes", L_hyperdense="Yes")),
 ("acuity", "Left subdural hematoma. There is a small acute component along the posterior margin.", dict(L_acuity="Acute on chronic", L_mixed_density="Yes", L_description="NR")),
 ("acuity", "Left subdural hematoma. No acute component.", dict(L_acuity="NR", L_mixed_density="NR")),
+("mass effect", "Left subdural hematoma. There is distortion and right-sided displacement of both lateral ventricles.", dict(effacement_lateral_ventricle="Yes NS", l_ventricle_laterality="Bilateral")),
+("sinus", "Left subdural hematoma. Fluid noted in the right sphenoid sinus which may be due to inflammatory sinus disease.", dict(sphenoid_sinus="Fluid", paranal_sinuses="NR")),
+("mass effect", "Left subdural hematoma. There is mass effect with sulcal effacement and mild effacement of the right ventricle.", dict(effacement_sulci_laterality="NR")),
 ]
