@@ -321,4 +321,8 @@ CASES = [
 ("mass effect", "Bilateral subdural hematomas. The ventricles are smaller indicating mild compressive effects from the combined hematomas.", dict(mass_effect_present="Mild")),
 ("negation", "Left subdural hematoma. There is no other clear acute cortical infarct, intra or extra-axial hemorrhage, mass effect, or hydrocephalus.", dict(mass_effect_present="No", hydrocephalus="No", subarachnoid_hemorrhage="No")),
 ("negation", "Right subdural hematoma. No other extra-axial or intraparenchymal hemorrhage.", dict(parenchymal_hemorrhage="No", subarachnoid_hemorrhage="No")),
+("density", "Left subdural hematoma with hyperdense and hypodense components.", dict(L_mixed_density="Yes", L_hyperdense="Yes", L_hypodense="Yes")),
+("density", "Left subdural hematoma with isodense and hypodense components.", dict(L_mixed_density="Yes")),
+("density", "Left hyperdense subdural hematoma. No hypodense component.", dict(L_mixed_density="NR")),
+("mass effect", "Left subdural hematoma. No transtentorial uncal herniation.", dict(herniation_uncal="No", herniation_transtentorial="No")),
 ]
