@@ -82,7 +82,7 @@ REPORT_TEXT_COLUMNS = ["full _report", "full_report", "report"]
 
 # wording differences that are not extraction errors
 EQUIV = {"dependent": "dependant", "mixed": "yes ns", "yes": "yes ns", "preserved": "yes ns",
-         "acute and subacute": "acute/subacute"}
+         "acute and subacute": "acute on subacute", "acute/subacute": "acute on subacute"}
 
 
 def load_notebook(path):
