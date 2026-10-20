@@ -351,4 +351,7 @@ CASES = [
 ("thickness", "Left convexity subdural hematoma. Maximum SDH width subjacent to the anterior left parietal bone is 7.6 mm.", dict(L_thickness_mm=7.6)),
 ("other bleeds", "Left subdural hematoma. There are subarachnoid hemorrhagic changes in the sylvian fissures.", dict(subarachnoid_hemorrhage="Yes")),
 ("uncertain", "Left subdural hematoma. A punctate focus of subarachnoid versus intraparenchymal hemorrhage over the left parietal lobe.", dict(subarachnoid_hemorrhage="Yes", parenchymal_hemorrhage="Yes")),
+("acuity", "Left subdural hematoma along the left frontal convexity measuring up to 0.8 cm. Hyperdensity in keeping with ongoing acute component.", dict(L_acuity="Acute on chronic", L_mixed_density="Yes", L_hyperdense="Yes")),
+("acuity", "Left subdural hematoma. There is a small acute component along the posterior margin.", dict(L_acuity="Acute on chronic", L_mixed_density="Yes", L_description="NR")),
+("acuity", "Left subdural hematoma. No acute component.", dict(L_acuity="NR", L_mixed_density="NR")),
 ]
