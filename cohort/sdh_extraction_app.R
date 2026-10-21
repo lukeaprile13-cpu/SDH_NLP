@@ -42,9 +42,12 @@ COHORT_FILE <- file.path(DATA_DIR, "sdh_validation_cohort.csv")
 SCREENING_FILE <- file.path(DATA_DIR, "sdh_screening.csv")
 extraction_file <- function(who) file.path(DATA_DIR, paste0("sdh_extraction_", gsub("[^A-Za-z0-9]", "_", who), ".csv"))
 
+# A report that compares with an earlier (outside) study is NOT excluded: it
+# is the first CT in the data for the encounter. Tick "compares with a prior
+# study" instead. Post-operative reports are excluded.
 EXCLUSION_REASONS <- c(
-  "Follow-up CT (not the first CT showing the SDH)",
   "Post-operative report",
+  "Earlier head CT in the data for this encounter",
   "No SDH described in the report",
   "Not a head CT / report incomplete",
   "Hospital cap reached",
@@ -258,6 +261,7 @@ ui <- fluidPage(
           radioButtons("s_stratum", "Stratum", choices = c("traumatic", "nontraumatic")),
           uiOutput("s_counts"),
           hr(),
+          checkboxInput("s_comparison", "Report compares with a prior study (again noted, unchanged, previously ...)"),
           actionButton("s_include", "Include", class = "btn-success", width = "100%"),
           br(), br(),
           selectInput("s_reason", "Exclusion reason", choices = EXCLUSION_REASONS, width = "100%"),
@@ -421,9 +425,11 @@ server <- function(input, output, session) {
     upsert(SCREENING_FILE, data.frame(
       row_id = row$row_id, stratum = row$stratum, screening_order = row$screening_order,
       genc_id = row$genc_id, hospital_num = row$hospital_num, decision = decision,
+      comparison_prior = isTRUE(input$s_comparison),
       reason = reason, screened_by = input$who, screened_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
     ))
     screening(read_or_empty(SCREENING_FILE))
+    updateCheckboxInput(session, "s_comparison", value = FALSE)
   }
 
   observeEvent(input$s_include, {
