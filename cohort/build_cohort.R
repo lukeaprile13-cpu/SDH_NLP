@@ -244,8 +244,7 @@ if (length(dev_files)) {
     substring(f, starts, starts + 119)
   })))
   cohort_fp <- fingerprint(cohort$imaging_result)
-  is_dev <- vapply(cohort_fp, function(f) any(vapply(dev_keys, grepl, logical(1), x = f, fixed = TRUE)),
-                   logical(1))
+  is_dev <- Reduce(`|`, lapply(dev_keys, grepl, x = cohort_fp, fixed = TRUE), FALSE)
   cat("Development reports read:", length(dev_text), " matched in the cohort:", sum(is_dev), "\n")
   excluded_dev <- excluded_dev + sum(is_dev)
   cohort <- cohort[!is_dev, ]
