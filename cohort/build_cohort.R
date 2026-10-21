@@ -305,7 +305,15 @@ cohort <- cohort %>%
     hint_postop         = grepl("post-?\\s?op|craniotomy|craniectomy|burr hole|evacuation|status post|s/p", txt),
     hint_fracture       = grepl("fractur", txt),
     hint_falx_tentorium = grepl("falx|falcine|interhemispheric|tentori", txt),
-    hint_herniation     = grepl("herniat", txt)
+    hint_herniation     = grepl("herniat", txt),
+    # a report that compares with an earlier study (often an outside CT
+    # before transfer); kept, and flagged (see add_comparison_flags.R)
+    flag_comparison     = grepl(paste(
+      "again (noted|seen|demonstrated|identified)", "re-?demonstrat", "unchanged", "\\bstable\\b",
+      "previously", "\\bprior (study|exam|ct|scan|imaging)",
+      "interval (increase|decrease|change|development|resolution|enlargement)",
+      "compared (to|with)", "in comparison", "no (significant )?change", "since the (prior|previous|last)",
+      "comparison:\\s*(ct|mri|outside|head|\\d)", "outside (ct|study|hospital|imaging)", sep = "|"), txt)
   )
 
 
