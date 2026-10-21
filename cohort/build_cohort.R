@@ -238,16 +238,18 @@ dev_files <- DEVELOPMENT_REPORT_FILES[file.exists(DEVELOPMENT_REPORT_FILES)]
 missing_files <- setdiff(DEVELOPMENT_REPORT_FILES, dev_files)
 if (length(missing_files)) warning("Development files not found: ", paste(missing_files, collapse = ", "))
 
-dev_keys <- character(0)
+# one row per fingerprint: which development report it comes from + the key
+dev_keys <- data.frame(dev_report = character(0), key = character(0))
 
 if (length(dev_files)) {
   dev_text <- unlist(lapply(dev_files, read_reports))
-  dev_keys <- unique(unlist(lapply(fingerprint(dev_text), function(f) {
+  dev_keys <- bind_rows(dev_keys, bind_rows(lapply(seq_along(dev_text), function(i) {
     # three stretches from each development report: start, middle, end
+    f <- fingerprint(dev_text[i])
     n <- nchar(f)
-    if (n < 120) return(character(0))
+    if (n < 120) return(NULL)
     starts <- unique(c(1, floor((n - 120) / 2) + 1, n - 119))
-    substring(f, starts, starts + 119)
+    data.frame(dev_report = paste0("file_", i), key = substring(f, starts, starts + 119))
   })))
   cat("Development reports read from files:", length(dev_text), "\n")
 }
@@ -255,18 +257,29 @@ if (length(dev_files)) {
 if (file.exists(DEVELOPMENT_FINGERPRINTS_FILE)) {
   fp_file <- read.csv(DEVELOPMENT_FINGERPRINTS_FILE, colClasses = "character")
   cat("Development reports in the fingerprint file:", length(unique(fp_file$dev_report)), "\n")
-  dev_keys <- unique(c(dev_keys, fp_file$key))
+  dev_keys <- bind_rows(dev_keys, mutate(fp_file, dev_report = paste0("fp_", dev_report)))
 }
 
-if (length(dev_keys)) {
+if (nrow(dev_keys)) {
+  # a cohort report is a development report when it holds one of that
+  # report's stretches. A stretch found in more than 3 cohort reports is a
+  # stock sentence ("images for surgical navigation are available ..."),
+  # not one report, and is ignored. Removing an extra report costs nothing;
+  # missing a development report would bias the validation.
   cohort_fp <- fingerprint(cohort$imaging_result)
-  is_dev <- Reduce(`|`, lapply(dev_keys, grepl, x = cohort_fp, fixed = TRUE), FALSE)
-  cat("Matched in the cohort:", sum(is_dev), "\n")
+  hits <- vapply(dev_keys$key, function(k) grepl(k, cohort_fp, fixed = TRUE), logical(length(cohort_fp)))
+  hits <- matrix(hits, nrow = length(cohort_fp))
+  stock <- colSums(hits) > 3
+  cat("Stock sentences ignored:", sum(stock), "of", ncol(hits), "fingerprints\n")
+  is_dev <- rowSums(hits[, !stock, drop = FALSE]) > 0
+  cat("Development reports matched in the cohort:",
+      length(unique(dev_keys$dev_report[!stock & colSums(hits) > 0])),
+      " cohort reports removed:", sum(is_dev), "\n")
   excluded_dev <- excluded_dev + sum(is_dev)
   cohort <- cohort[!is_dev, ]
 }
 
-if (!file.exists(DEVELOPMENT_IDS_FILE) && !length(dev_keys)) {
+if (!file.exists(DEVELOPMENT_IDS_FILE) && !nrow(dev_keys)) {
   warning("No development ids or files: reports used to build the NLP are not excluded yet.")
 }
 cat("Development reports removed:", excluded_dev, "\n")
