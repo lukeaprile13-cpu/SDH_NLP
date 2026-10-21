@@ -359,4 +359,6 @@ CASES = [
 ("mass effect", "Left subdural hematoma. There is mass effect with sulcal effacement and mild effacement of the right ventricle.", dict(effacement_sulci_laterality="NR")),
 ("thickness", "There is a hyperdense subdural hematoma over the left cerebral convexity and left tentorium. The component overlying the left cerebral convexity measures 11-mm and the tentorial component measures 15-mm.", dict(L_thickness_mm=11.0, tentorium_thickness_mm=15.0)),
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the right tentorium and the falx.", dict(parafalcine_hematoma="Yes NS", tentorium_hematoma="Right")),
+("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the falx and right tentorium.", dict(parafalcine_description="Small", tentorium_description="Small", tentorium_hematoma="Right")),
+("falx", "There is a small amount of subdural hemorrhage along the falx.", dict(laterality="Falx", parafalcine_description="Small")),
 ]
