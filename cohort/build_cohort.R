@@ -135,14 +135,20 @@ other_dx <- ipdiag %>%
   summarise(other_codes = paste(paste0(diagnosis_code, "(", diagnosis_type, ")"), collapse = "; "),
             .groups = "drop")
 
+# ER context: where the patient came from (a transfer often had an outside
+# CT first), triage level, ambulance arrival; the first ER record per
+# encounter, so no cohort row is duplicated
 er_info <- NULL
 if (!is.null(er)) {
   complaint_cols <- grep("complaint", names(er), value = TRUE)
   er_info <- er %>%
-    select(genc_id, any_of(complaint_cols)) %>%
+    select(genc_id, any_of(c(complaint_cols, "institution_from", "triage_level",
+                             "admit_via_ambulance", "triage_date_time"))) %>%
+    arrange(genc_id, triage_date_time) %>%
     group_by(genc_id) %>%
-    summarise(across(everything(), ~ paste(unique(na.omit(as.character(.x))), collapse = "; ")),
-              .groups = "drop")
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    mutate(transferred_in = !is.na(institution_from) & trimws(as.character(institution_from)) != "")
 }
 
 er_dx_info <- NULL
@@ -195,7 +201,10 @@ cohort <- enc %>%
   inner_join(ct_index, by = "genc_id") %>%
   left_join(main_diag, by = "genc_id") %>%
   left_join(other_dx, by = "genc_id")
-if (!is.null(er_info))    cohort <- left_join(cohort, er_info, by = "genc_id")
+if (!is.null(er_info)) {
+  cohort <- left_join(cohort, er_info, by = "genc_id") %>%
+    mutate(transferred_in = coalesce(transferred_in, FALSE))
+}
 if (!is.null(er_dx_info)) cohort <- left_join(cohort, er_dx_info, by = "genc_id")
 
 
@@ -289,7 +298,8 @@ if (nrow(dev_keys)) {
 }
 
 if (!file.exists(DEVELOPMENT_IDS_FILE) && !nrow(dev_keys)) {
-  warning("No development ids or files: reports used to build the NLP are not excluded yet.")
+  stop("No development reports loaded: paste dev_keys_paste.R into this session first, ",
+       "so reports used to build the NLP are removed.")
 }
 cat("Development reports removed:", excluded_dev, "\n")
 
@@ -346,5 +356,12 @@ cat("\nAge\n")
 print(cohort %>% group_by(stratum) %>% summarise(median = median(age), q1 = quantile(age, .25), q3 = quantile(age, .75)))
 cat("\nLargest hospitals (cap: 22 of 150, 11 per stratum)\n")
 print(cohort %>% count(stratum, hospital_num, sort = TRUE) %>% group_by(stratum) %>% slice_head(n = 5))
+if ("transferred_in" %in% names(cohort)) {
+  cat("\nTransferred in / comparison wording (share of reports)\n")
+  print(cohort %>% group_by(stratum) %>%
+          summarise(transferred_in = round(mean(transferred_in), 2),
+                    comparison_wording = round(mean(flag_comparison), 2),
+                    either = round(mean(transferred_in | flag_comparison), 2)))
+}
 cat("\nKeyword hints (share of reports)\n")
 print(cohort %>% group_by(stratum) %>% summarise(across(starts_with("hint_"), ~ round(mean(.x), 2))))
