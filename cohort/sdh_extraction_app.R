@@ -256,9 +256,14 @@ ui <- fluidPage(
     # ---------------- screening
     tabPanel("Screening",
       br(),
+      fluidRow(column(12,
+        actionButton("s_pick_trauma", "Traumatic (S065)", class = "btn-lg", style = "width:260px;"),
+        actionButton("s_pick_nontrauma", "Non-traumatic (I620)", class = "btn-lg", style = "width:260px;"),
+        uiOutput("s_banner", inline = TRUE)
+      )),
+      br(),
       fluidRow(
         column(3,
-          radioButtons("s_stratum", "Stratum", choices = c("traumatic", "nontraumatic")),
           uiOutput("s_counts"),
           hr(),
           checkboxInput("s_comparison", "Report compares with a prior study (again noted, unchanged, previously ...)"),
@@ -307,7 +312,10 @@ ui <- fluidPage(
               p("Takes the report out of the sample and records why; screening then adds the next report in its place."),
               selectInput("e_ex_reason", "Reason", choices = setdiff(EXCLUSION_REASONS, "Hospital cap reached"), width = "100%"),
               textInput("e_ex_other", "Other reason (if Other)", width = "100%"),
-              actionButton("e_exclude", "Exclude and send back to screening", class = "btn-danger", width = "100%")
+              actionButton("e_exclude", "Exclude and send back to screening", class = "btn-danger", width = "100%"),
+              br(), br(),
+              p("Or just undo the inclusion: the report goes back to screening undecided and comes up again there."),
+              actionButton("e_sendback", "Send back to screening (no decision)", width = "100%")
             )
           )
         )
@@ -339,9 +347,20 @@ server <- function(input, output, session) {
     dat %>% filter(row_id %in% as.integer(s$row_id[s$decision == "Included"]))
   })
 
+  # which stratum is being screened (the two buttons at the top)
+  s_stratum <- reactiveVal("traumatic")
+  observeEvent(input$s_pick_trauma, s_stratum("traumatic"))
+  observeEvent(input$s_pick_nontrauma, s_stratum("nontraumatic"))
+  output$s_banner <- renderUI({
+    lab <- if (s_stratum() == "traumatic") "TRAUMATIC reports (S065)" else "NON-TRAUMATIC reports (I620)"
+    col <- if (s_stratum() == "traumatic") "#c62828" else "#1565c0"
+    span(style = paste0("margin-left:20px; font-size:20px; font-weight:bold; color:", col, ";"),
+         "Now screening: ", lab)
+  })
+
   next_candidate <- reactive({
     done <- if (is.null(screening())) integer(0) else as.integer(screening()$row_id)
-    dat %>% filter(stratum == input$s_stratum, !(row_id %in% done)) %>% slice_head(n = 1)
+    dat %>% filter(stratum == s_stratum(), !(row_id %in% done)) %>% slice_head(n = 1)
   })
 
   # findings in the included reports, from the screener's own extraction
@@ -387,7 +406,7 @@ server <- function(input, output, session) {
       sum(inc$hospital_num == row$hospital_num) >= HOSPITAL_CAP_TOTAL
   })
 
-  stratum_full <- reactive(sum(main_included()$stratum == input$s_stratum) >= TARGET_PER_STRATUM)
+  stratum_full <- reactive(sum(main_included()$stratum == s_stratum()) >= TARGET_PER_STRATUM)
 
   output$s_context <- renderUI({
     row <- next_candidate()
@@ -465,6 +484,17 @@ server <- function(input, output, session) {
     q
   })
   observeEvent(input$e_stratum, idx(1))
+
+  observeEvent(input$e_sendback, {
+    row <- current()
+    if (is.null(row)) return()
+    s <- read_or_empty(SCREENING_FILE)
+    if (is.null(s)) return()
+    s <- s[s$row_id != as.character(row$row_id), , drop = FALSE]
+    write.csv(s, SCREENING_FILE, row.names = FALSE, na = "")
+    screening(read_or_empty(SCREENING_FILE))
+    showNotification(paste("Row", row$row_id, "sent back to screening."), type = "warning", duration = 5)
+  })
 
   observeEvent(input$e_exclude, {
     row <- current()
