@@ -366,4 +366,6 @@ CASES = [
 ("falx", "Small subdural hematoma along the anterior and mid falx.", dict(parafalcine_location="Anterior/medial")),
 ("falx", "Small subdural hematoma along the middle third of the falx and posteriorly.", dict(parafalcine_location="Medial/posterior")),
 ("falx", "Left subdural hematoma with extension along the midline falx, measuring 3 mm.", dict(parafalcine_location="NR")),
+("falx", "There is an acute on chronic subdural hematoma on the left. Small acute subdural hemorrhage along the tentorium measuring 5 mm. SUMMARY: Acute on chronic left subdural hematoma with extension along the tentorium.", dict(L_acuity="Acute on chronic", tentorium_acuity="Acute", tentorium_hematoma="Left", tentorium_thickness_mm=5.0)),
+("falx", "Acute on chronic left subdural hematoma with extension along the tentorium.", dict(L_acuity="Acute on chronic", tentorium_acuity="Acute on chronic", tentorium_hematoma="Left")),
 ]
