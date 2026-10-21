@@ -114,7 +114,7 @@ VARIABLES <- c(
   list(
     v("parafalcine_hematoma", "Falx", COMPART, "Falx SDH"),
     v("parafalcine_description", "Falx", DESC, "Description"),
-    v("parafalcine_location", "Falx", c("NR", "Anterior", "Posterior", "Anterior/posterior"), "Location"),
+    v("parafalcine_location", "Falx", c("NR", "Anterior", "Medial", "Posterior", "Anterior/medial", "Medial/posterior", "Anterior/posterior"), "Location"),
     v("parafalcine_thickness_mm", "Falx", label = "Thickness (mm)", numeric = TRUE),
     v("parafalcine_density", "Falx", CDENS, "Density"),
     v("parafalcine_acuity", "Falx", ACUITY, "Acuity"),
