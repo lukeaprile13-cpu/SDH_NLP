@@ -38,9 +38,21 @@ CT_WINDOW_AFTER_H  <- 72
 # not the index non-contrast head CT
 CT_NAME_EXCLUDE <- "angio|cta\\b|perfusion|venogra|spine|neck|facial|sinus|orbit|temporal bone|stereotac|navigation"
 
-# encounters whose reports were used to build the NLP (column genc_id);
-# they can never be sampled
+# reports used to build the NLP can never be sampled. Either list their
+# encounters (a csv with a genc_id column) or give the files that hold
+# their text (csv or xlsx; the report column is found automatically) -
+# a cohort report whose text matches one of them is removed
 DEVELOPMENT_IDS_FILE <- "development_genc_ids.csv"
+DEVELOPMENT_REPORT_FILES <- c(
+  # "Reports.CSV.xlsx",                    # first 50
+  # "report_final_5.csv",                  # batch 9
+  # "new13_reports.csv",
+  # "FINAL_BLANK_SHEET - Copy.csv",        # DEV15
+  # "val.csv",                             # VAL20
+  # "more_reports_1.xlsx", "more_reports_2.xlsx", "more_reports_3.xlsx",
+  # "Claude_test_before_validation.xlsx",  # the latest version (holds all 27)
+  # "LLM_Comparison.xlsx"
+)
 
 SEED <- 20261021
 OUTPUT_FILE <- "sdh_validation_cohort.csv"
@@ -191,12 +203,58 @@ cohort <- cohort %>%
   slice_min(performed_date_time, n = 1, with_ties = FALSE) %>%
   ungroup()
 
+excluded_dev <- 0
+
 if (file.exists(DEVELOPMENT_IDS_FILE)) {
   dev_ids <- read.csv(DEVELOPMENT_IDS_FILE, colClasses = "character")$genc_id
+  before <- nrow(cohort)
   cohort <- filter(cohort, !(as.character(genc_id) %in% dev_ids))
-} else {
-  warning("No development id file: reports used to build the NLP are not excluded yet.")
+  excluded_dev <- excluded_dev + before - nrow(cohort)
 }
+
+# match by text: letters only, lower case, so spacing, line breaks and the
+# "|" of the exports do not matter; two reports match when they share a
+# 120-letter stretch
+fingerprint <- function(x) gsub("[^a-z]", "", tolower(as.character(x)))
+
+read_reports <- function(path) {
+  d <- if (grepl("\\.xlsx?$", path, ignore.case = TRUE)) {
+    as.data.frame(readxl::read_excel(path, col_types = "text"))
+  } else {
+    read.csv(path, colClasses = "character", check.names = FALSE)
+  }
+  # the report column = the one with the longest text on average
+  lens <- sapply(d, function(col) mean(nchar(as.character(col)), na.rm = TRUE))
+  col <- names(which.max(lens))
+  out <- as.character(d[[col]])
+  out[!is.na(out) & nchar(out) > 100]
+}
+
+dev_files <- DEVELOPMENT_REPORT_FILES[file.exists(DEVELOPMENT_REPORT_FILES)]
+missing_files <- setdiff(DEVELOPMENT_REPORT_FILES, dev_files)
+if (length(missing_files)) warning("Development files not found: ", paste(missing_files, collapse = ", "))
+
+if (length(dev_files)) {
+  dev_text <- unlist(lapply(dev_files, read_reports))
+  dev_keys <- unique(unlist(lapply(fingerprint(dev_text), function(f) {
+    # three stretches from each development report: start, middle, end
+    n <- nchar(f)
+    if (n < 120) return(character(0))
+    starts <- unique(c(1, floor((n - 120) / 2) + 1, n - 119))
+    substring(f, starts, starts + 119)
+  })))
+  cohort_fp <- fingerprint(cohort$imaging_result)
+  is_dev <- vapply(cohort_fp, function(f) any(vapply(dev_keys, grepl, logical(1), x = f, fixed = TRUE)),
+                   logical(1))
+  cat("Development reports read:", length(dev_text), " matched in the cohort:", sum(is_dev), "\n")
+  excluded_dev <- excluded_dev + sum(is_dev)
+  cohort <- cohort[!is_dev, ]
+}
+
+if (!file.exists(DEVELOPMENT_IDS_FILE) && !length(dev_files)) {
+  warning("No development ids or files: reports used to build the NLP are not excluded yet.")
+}
+cat("Development reports removed:", excluded_dev, "\n")
 
 
 # ---------------------------------------------------------------------
