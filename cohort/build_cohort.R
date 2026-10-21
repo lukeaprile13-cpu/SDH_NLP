@@ -1,197 +1,186 @@
 # =====================================================================
 # SDH validation cohort
 #
-# Builds the sampling frame for the NLP / LLM validation:
-#   one row per patient = their first eligible encounter with an SDH code,
-#   with the first head CT of that encounter, its report, and the
-#   variables needed for screening (hospital, age, presenting complaint).
-#   Two strata by ICD-10-CA code, each in a fixed random screening order.
+# Builds the sampling frame for the NLP / LLM validation: one row per
+# patient = the first head CT of their first SDH encounter, with the
+# report, hospital, age, sex, diagnoses and ER presenting complaint.
+# Two strata, each in a fixed random screening order:
 #
-#   traumatic       S065  (S06.5 traumatic subdural haemorrhage)
-#   non-traumatic   I620  (I62.0 non-traumatic subdural haemorrhage)
+#   traumatic       S065   (an encounter with any S065 code)
+#   nontraumatic    I620   (I620 and no S065)
 #
-# Run it where the data lives. The output contains report text: keep it
-# on the approved server, never in git or email.
+# Uses the same tables and connection as the SDH viewer code (db, datacut).
+# The output holds report text: keep it on the GEMINI server.
 # =====================================================================
 
 library(DBI)
 library(dplyr)
 library(stringr)
 library(lubridate)
-library(readr)
 
 
 # ---------------------------------------------------------------------
-# SETTINGS - match these to your database before running
+# SETTINGS
 # ---------------------------------------------------------------------
 
-# con <- DBI::dbConnect(...)            # your existing connection
+MIN_AGE <- 18            # set to 60 if the study population is 60+
 
-TABLES <- list(
-  admdad      = "admdad",               # one row per encounter
-  ipdiagnosis = "ipdiagnosis",          # inpatient diagnoses
-  erdiagnosis = "erdiagnosis",          # emergency diagnoses
-  er          = "er",                   # ER visit (presenting complaint, triage time)
-  radiology   = "radiology"             # imaging tests and reports
-)
+# DAD diagnosis types that count as an SDH present on arrival.
+# "2" (post-admit comorbidity) = an SDH that developed in hospital: left out.
+# c("M") = SDH must be the most responsible diagnosis (narrower; see notes).
+SDH_TYPES_KEEP <- c("M", "1", "3", "W", "X", "Y", "6")
 
-COLS <- list(
-  encounter        = "genc_id",
-  patient          = "patient_id_hashed",     # set to NA if there is no patient id
-  hospital         = "hospital_num",
-  age              = "age",
-  admit_time       = "admission_date_time",
-  ip_code          = "diagnosis_code",
-  ip_type          = "diagnosis_type",
-  er_code          = "er_diagnosis_code",
-  er_type          = "er_diagnosis_type",
-  complaint        = "presenting_complaint",  # in the er table
-  triage_time      = "triage_date_time",      # in the er table
-  test_name        = "test_name_raw",         # CT name, e.g. "CT HEAD W/O CONTRAST"
-  modality         = "modality_mapped",       # set to NA if there is no modality column
-  ordered_time     = "ordered_date_time",
-  performed_time   = "performed_date_time",
-  report_text      = "result_text"            # the radiology report
-)
-
-SDH_CODES <- c(traumatic = "S065", nontraumatic = "I620")
-
-# DAD diagnosis types that count. "2" (post-admit comorbidity) is an SDH
-# that developed after admission - left out so the CT is the presenting
-# one. Use c("M") for "SDH must be the most responsible diagnosis".
-IP_TYPES_KEEP <- c("M", "1", "3", "W", "X", "Y", "6")
-
-MIN_AGE <- 18
-STUDY_START <- as.Date("2015-04-01")
-STUDY_END   <- as.Date("2023-03-31")
-
-# first head CT from this long before arrival to this long after
-CT_WINDOW_BEFORE_H <- 24
+# the index CT: performed from this long before admission to this long after
+# (the ER CT is usually before the admit time)
+CT_WINDOW_BEFORE_H <- 48
 CT_WINDOW_AFTER_H  <- 72
 
-# reports already used to build the NLP (one report id or encounter id
-# per line, column "genc_id"); they can never be sampled
-DEVELOPMENT_IDS_FILE <- "development_report_ids.csv"
+# not the index non-contrast head CT
+CT_NAME_EXCLUDE <- "angio|cta\\b|perfusion|venogra|spine|neck|facial|sinus|orbit|temporal bone|stereotac|navigation"
+
+# encounters whose reports were used to build the NLP (column genc_id);
+# they can never be sampled
+DEVELOPMENT_IDS_FILE <- "development_genc_ids.csv"
 
 SEED <- 20261021
 OUTPUT_FILE <- "sdh_validation_cohort.csv"
 
 
 # ---------------------------------------------------------------------
-# 1. Encounters with an SDH code (inpatient or emergency)
+# 1. SDH encounters
 # ---------------------------------------------------------------------
 
-codes <- unname(SDH_CODES)
+dbGetQuery(db, paste0("SET search_path TO '", datacut, "', public;"))
 
-ip_sdh <- tbl(con, TABLES$ipdiagnosis) |>
-  transmute(genc_id = .data[[COLS$encounter]],
-            code = .data[[COLS$ip_code]],
-            dx_type = .data[[COLS$ip_type]]) |>
-  filter(substr(code, 1, 4) %in% codes) |>
-  collect() |>
-  filter(dx_type %in% IP_TYPES_KEEP) |>
-  mutate(source = "ip")
+sdh_ids <- dbGetQuery(db, "
+  SELECT DISTINCT genc_id
+  FROM ipdiagnosis_subset
+  WHERE diagnosis_code LIKE 'I620%' OR diagnosis_code LIKE 'S065%'
+")
+cat("SDH encounters (any diagnosis type):", nrow(sdh_ids), "\n")
 
-er_sdh <- tbl(con, TABLES$erdiagnosis) |>
-  transmute(genc_id = .data[[COLS$encounter]],
-            code = .data[[COLS$er_code]],
-            dx_type = .data[[COLS$er_type]]) |>
-  filter(substr(code, 1, 4) %in% codes) |>
-  collect() |>
-  mutate(source = "er")
+tryCatch({ rs <- dbSendQuery(db, "DROP TABLE IF EXISTS temp_sdh"); dbClearResult(rs) }, error = function(e) NULL)
+DBI::dbWriteTable(db, c("pg_temp", "temp_sdh"), sdh_ids, row.names = FALSE, overwrite = TRUE)
 
-sdh_dx <- bind_rows(ip_sdh, er_sdh) |>
-  mutate(code4 = substr(code, 1, 4))
+admdad <- dbGetQuery(db, "SELECT a.* FROM admdad_subset a INNER JOIN temp_sdh t ON a.genc_id = t.genc_id")
+ipdiag <- dbGetQuery(db, "SELECT d.genc_id, d.diagnosis_code, d.diagnosis_type FROM ipdiagnosis_subset d INNER JOIN temp_sdh t ON d.genc_id = t.genc_id")
+ct_reports <- dbGetQuery(db, "
+  SELECT r.genc_id, r.imaging_result, r.test_name_raw, r.performed_date_time
+  FROM radiology_subset r
+  INNER JOIN temp_sdh t ON r.genc_id = t.genc_id
+  WHERE r.modality_mapped = 'CT'
+    AND (LOWER(r.test_name_raw) LIKE '%head%' OR LOWER(r.test_name_raw) LIKE '%brain%')
+")
 
-# one row per encounter; an encounter with both codes is traumatic
-sdh_enc <- sdh_dx |>
-  group_by(genc_id) |>
+# ER presenting complaint and ER diagnoses, when the tables exist
+# (column names are found by pattern, so they do not need to be exact)
+er <- tryCatch(
+  dbGetQuery(db, "SELECT e.* FROM er_subset e INNER JOIN temp_sdh t ON e.genc_id = t.genc_id"),
+  error = function(e) NULL
+)
+erdiag <- tryCatch(
+  dbGetQuery(db, "SELECT e.* FROM erdiagnosis_subset e INNER JOIN temp_sdh t ON e.genc_id = t.genc_id"),
+  error = function(e) NULL
+)
+cat("admdad:", nrow(admdad), " ipdiagnosis:", nrow(ipdiag), " head CTs:", nrow(ct_reports),
+    " er:", if (is.null(er)) "not found" else nrow(er),
+    " erdiagnosis:", if (is.null(erdiag)) "not found" else nrow(erdiag), "\n")
+
+
+# ---------------------------------------------------------------------
+# 2. Diagnoses per encounter: stratum, SDH coding, main and other codes
+# ---------------------------------------------------------------------
+
+is_sdh <- function(code) grepl("^I620|^S065", code)
+
+sdh_info <- ipdiag %>%
+  filter(is_sdh(diagnosis_code)) %>%
+  group_by(genc_id) %>%
   summarise(
-    stratum = if_else(any(code4 == SDH_CODES[["traumatic"]]), "traumatic", "nontraumatic"),
-    both_codes = n_distinct(code4) > 1,
-    sdh_codes = paste(sort(unique(code)), collapse = ";"),
-    sdh_most_responsible = any(source == "ip" & dx_type == "M"),
-    sdh_dx_sources = paste(sort(unique(source)), collapse = ";"),
+    sdh_codes = paste(unique(diagnosis_code), collapse = "; "),
+    sdh_types = paste(unique(diagnosis_type), collapse = "; "),
+    sdh_present_on_arrival = any(diagnosis_type %in% SDH_TYPES_KEEP),
+    sdh_is_primary = any(diagnosis_type == "M"),
+    has_traumatic = any(grepl("^S065", diagnosis_code)),
+    has_nontraumatic = any(grepl("^I620", diagnosis_code)),
     .groups = "drop"
-  )
+  ) %>%
+  mutate(stratum = if_else(has_traumatic, "traumatic", "nontraumatic"))
+
+main_diag <- ipdiag %>%
+  filter(diagnosis_type == "M") %>%
+  group_by(genc_id) %>%
+  summarise(main_diagnosis = paste(diagnosis_code, collapse = "; "), .groups = "drop")
+
+other_dx <- ipdiag %>%
+  filter(!is_sdh(diagnosis_code)) %>%
+  group_by(genc_id) %>%
+  summarise(other_codes = paste(paste0(diagnosis_code, "(", diagnosis_type, ")"), collapse = "; "),
+            .groups = "drop")
+
+er_info <- NULL
+if (!is.null(er)) {
+  complaint_cols <- grep("complaint", names(er), value = TRUE)
+  er_info <- er %>%
+    select(genc_id, any_of(complaint_cols)) %>%
+    group_by(genc_id) %>%
+    summarise(across(everything(), ~ paste(unique(na.omit(as.character(.x))), collapse = "; ")),
+              .groups = "drop")
+}
+
+er_dx_info <- NULL
+if (!is.null(erdiag)) {
+  code_col <- grep("diagnosis_code", names(erdiag), value = TRUE)[1]
+  er_dx_info <- erdiag %>%
+    group_by(genc_id) %>%
+    summarise(er_diagnosis_codes = paste(unique(.data[[code_col]]), collapse = "; "), .groups = "drop")
+}
 
 
 # ---------------------------------------------------------------------
-# 2. Encounter details: hospital, age, arrival, presenting complaint
+# 3. Encounters that qualify, and their first head CT
 # ---------------------------------------------------------------------
 
-adm <- tbl(con, TABLES$admdad) |>
-  filter(.data[[COLS$encounter]] %in% !!sdh_enc$genc_id) |>
-  collect() |>
-  transmute(genc_id = .data[[COLS$encounter]],
-            patient_id = if (is.na(COLS$patient)) .data[[COLS$encounter]] else .data[[COLS$patient]],
-            hospital_num = .data[[COLS$hospital]],
-            age = .data[[COLS$age]],
-            admit_time = ymd_hms(.data[[COLS$admit_time]], truncated = 3))
+enc <- admdad %>%
+  select(any_of(c("genc_id", "patient_id_hashed", "age", "gender", "hospital_num",
+                  "admit_date_time", "discharge_date_time", "admit_category",
+                  "discharge_disposition"))) %>%
+  inner_join(sdh_info, by = "genc_id") %>%
+  mutate(admit_date_time = ymd_hms(admit_date_time, truncated = 3)) %>%
+  filter(sdh_present_on_arrival, age >= MIN_AGE)
 
-er_visit <- tbl(con, TABLES$er) |>
-  filter(.data[[COLS$encounter]] %in% !!sdh_enc$genc_id) |>
-  collect() |>
-  transmute(genc_id = .data[[COLS$encounter]],
-            presenting_complaint = .data[[COLS$complaint]],
-            triage_time = ymd_hms(.data[[COLS$triage_time]], truncated = 3)) |>
-  group_by(genc_id) |>
-  slice_min(triage_time, n = 1, with_ties = FALSE) |>
-  ungroup()
+ct_index <- ct_reports %>%
+  filter(!is.na(imaging_result), trimws(imaging_result) != "",
+         !grepl(CT_NAME_EXCLUDE, tolower(test_name_raw))) %>%
+  mutate(performed_date_time = ymd_hms(performed_date_time, truncated = 3)) %>%
+  inner_join(select(enc, genc_id, admit_date_time), by = "genc_id") %>%
+  mutate(hours_from_admit = as.numeric(difftime(performed_date_time, admit_date_time, units = "hours"))) %>%
+  group_by(genc_id) %>%
+  mutate(head_cts_in_encounter = n()) %>%
+  filter(hours_from_admit >= -CT_WINDOW_BEFORE_H, hours_from_admit <= CT_WINDOW_AFTER_H) %>%
+  slice_min(performed_date_time, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(-admit_date_time)
 
-enc <- sdh_enc |>
-  inner_join(adm, by = "genc_id") |>
-  left_join(er_visit, by = "genc_id") |>
-  mutate(arrival_time = coalesce(triage_time, admit_time)) |>
-  filter(age >= MIN_AGE,
-         as.Date(arrival_time) >= STUDY_START,
-         as.Date(arrival_time) <= STUDY_END)
-
-
-# ---------------------------------------------------------------------
-# 3. The first head CT of each encounter, with its report
-# ---------------------------------------------------------------------
-
-rad <- tbl(con, TABLES$radiology) |>
-  filter(.data[[COLS$encounter]] %in% !!enc$genc_id) |>
-  collect() |>
-  transmute(genc_id = .data[[COLS$encounter]],
-            ct_name = .data[[COLS$test_name]],
-            modality = if (is.na(COLS$modality)) NA_character_ else .data[[COLS$modality]],
-            ct_ordered_time = ymd_hms(.data[[COLS$ordered_time]], truncated = 3),
-            ct_performed_time = ymd_hms(.data[[COLS$performed_time]], truncated = 3),
-            report_text = .data[[COLS$report_text]])
-
-head_ct <- rad |>
-  filter(
-    is.na(modality) | str_detect(str_to_upper(modality), "CT"),
-    str_detect(str_to_upper(ct_name), "\\bCT\\b|COMPUTED TOMOGRAPHY"),
-    str_detect(str_to_upper(ct_name), "HEAD|BRAIN|CRANI"),
-    # angiograms, perfusion, spine-only and face-only studies are not the index head CT
-    !str_detect(str_to_upper(ct_name), "ANGIO|CTA\\b|PERFUSION|VENOGRAM|SPINE ONLY|FACIAL BONES ONLY"),
-    !is.na(report_text), str_length(report_text) > 50
-  ) |>
-  inner_join(select(enc, genc_id, arrival_time), by = "genc_id") |>
-  mutate(hours_from_arrival = as.numeric(difftime(ct_performed_time, arrival_time, units = "hours"))) |>
-  filter(hours_from_arrival >= -CT_WINDOW_BEFORE_H,
-         hours_from_arrival <= CT_WINDOW_AFTER_H) |>
-  group_by(genc_id) |>
-  slice_min(ct_performed_time, n = 1, with_ties = FALSE) |>
-  ungroup()
+cohort <- enc %>%
+  inner_join(ct_index, by = "genc_id") %>%
+  left_join(main_diag, by = "genc_id") %>%
+  left_join(other_dx, by = "genc_id")
+if (!is.null(er_info))    cohort <- left_join(cohort, er_info, by = "genc_id")
+if (!is.null(er_dx_info)) cohort <- left_join(cohort, er_dx_info, by = "genc_id")
 
 
 # ---------------------------------------------------------------------
-# 4. One encounter per patient, development reports removed
+# 4. One encounter per patient (the first), development reports removed
 # ---------------------------------------------------------------------
 
-cohort <- enc |>
-  inner_join(head_ct, by = c("genc_id", "arrival_time")) |>
-  group_by(patient_id) |>
-  slice_min(arrival_time, n = 1, with_ties = FALSE) |>
+cohort <- cohort %>%
+  group_by(patient_id_hashed) %>%
+  slice_min(performed_date_time, n = 1, with_ties = FALSE) %>%
   ungroup()
 
 if (file.exists(DEVELOPMENT_IDS_FILE)) {
-  dev_ids <- read_csv(DEVELOPMENT_IDS_FILE, col_types = cols(.default = "c"))$genc_id
+  dev_ids <- read.csv(DEVELOPMENT_IDS_FILE, colClasses = "character")$genc_id
   cohort <- filter(cohort, !(as.character(genc_id) %in% dev_ids))
 } else {
   warning("No development id file: reports used to build the NLP are not excluded yet.")
@@ -199,18 +188,17 @@ if (file.exists(DEVELOPMENT_IDS_FILE)) {
 
 
 # ---------------------------------------------------------------------
-# 5. Screening helpers (flags only - a person makes every decision)
+# 5. Keyword hints for screening (a person makes every decision)
 # ---------------------------------------------------------------------
 
-txt <- str_to_lower(cohort$report_text)
-
-cohort <- cohort |>
+txt <- tolower(cohort$imaging_result)
+cohort <- cohort %>%
   mutate(
-    flag_sdh_in_report  = str_detect(txt, "subdural|\\bsdh\\b|extra-?\\s?axial (hematoma|haematoma|hemorrhage|collection)"),
-    flag_postop         = str_detect(txt, "post-?\\s?op|craniotomy|craniectomy|burr hole|evacuation|status post|s/p"),
-    flag_fracture_word  = str_detect(txt, "fractur"),
-    flag_falx_tentorium = str_detect(txt, "falx|falcine|interhemispheric|tentori"),
-    flag_herniation     = str_detect(txt, "herniat")
+    hint_sdh_in_report  = grepl("subdural|\\bsdh\\b|extra-?\\s?axial (hematoma|haematoma|hemorrhage|collection)", txt),
+    hint_postop         = grepl("post-?\\s?op|craniotomy|craniectomy|burr hole|evacuation|status post|s/p", txt),
+    hint_fracture       = grepl("fractur", txt),
+    hint_falx_tentorium = grepl("falx|falcine|interhemispheric|tentori", txt),
+    hint_herniation     = grepl("herniat", txt)
   )
 
 
@@ -219,34 +207,29 @@ cohort <- cohort |>
 # ---------------------------------------------------------------------
 
 set.seed(SEED)
+cohort <- cohort %>%
+  group_by(stratum) %>%
+  mutate(screening_order = sample(n())) %>%
+  ungroup() %>%
+  arrange(stratum, screening_order) %>%
+  mutate(row_id = row_number()) %>%
+  relocate(row_id, stratum, screening_order, genc_id, patient_id_hashed, hospital_num,
+           age, gender, sdh_codes, sdh_is_primary, test_name_raw, performed_date_time,
+           hours_from_admit) %>%
+  relocate(imaging_result, .after = last_col())
 
-cohort <- cohort |>
-  group_by(stratum) |>
-  mutate(screening_order = sample(n())) |>
-  ungroup() |>
-  arrange(stratum, screening_order) |>
-  mutate(row_id = row_number()) |>
-  select(row_id, stratum, screening_order, genc_id, patient_id, hospital_num, age,
-         presenting_complaint, sdh_codes, both_codes, sdh_most_responsible, sdh_dx_sources,
-         arrival_time, ct_name, ct_ordered_time, ct_performed_time, hours_from_arrival,
-         starts_with("flag_"), report_text)
-
-write_csv(cohort, OUTPUT_FILE)
+write.csv(cohort, OUTPUT_FILE, row.names = FALSE, na = "")
 
 
 # ---------------------------------------------------------------------
 # 7. Summary
 # ---------------------------------------------------------------------
 
-cat("\nPatients per stratum\n")
-print(count(cohort, stratum))
-
-cat("\nSDH as most responsible diagnosis\n")
-print(count(cohort, stratum, sdh_most_responsible))
-
-cat("\nLargest hospitals (15% cap = 22 of 150, 11 per stratum)\n")
-print(cohort |> count(stratum, hospital_num, sort = TRUE) |> group_by(stratum) |> slice_head(n = 5))
-
-cat("\nScreening flags (keyword hits, not findings)\n")
-print(cohort |> group_by(stratum) |>
-        summarise(across(starts_with("flag_"), ~ round(mean(.x), 2)), .groups = "drop"))
+cat("\nPatients per stratum\n");               print(count(cohort, stratum))
+cat("\nSDH is the most responsible diagnosis\n"); print(count(cohort, stratum, sdh_is_primary))
+cat("\nAge\n")
+print(cohort %>% group_by(stratum) %>% summarise(median = median(age), q1 = quantile(age, .25), q3 = quantile(age, .75)))
+cat("\nLargest hospitals (cap: 22 of 150, 11 per stratum)\n")
+print(cohort %>% count(stratum, hospital_num, sort = TRUE) %>% group_by(stratum) %>% slice_head(n = 5))
+cat("\nKeyword hints (share of reports)\n")
+print(cohort %>% group_by(stratum) %>% summarise(across(starts_with("hint_"), ~ round(mean(.x), 2))))
