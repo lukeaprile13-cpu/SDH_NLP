@@ -34,8 +34,13 @@ HOSPITAL_CAP_STRATUM <- 11      # 15% of 75
 HOSPITAL_CAP_TOTAL <- 22        # 15% of 150
 FINDING_MINIMUM <- 20           # fracture, falx / tentorium, herniation
 
-SCREENING_FILE <- "sdh_screening.csv"
-extraction_file <- function(who) paste0("sdh_extraction_", gsub("[^A-Za-z0-9]", "_", who), ".csv")
+# the folder that holds the cohort and every saved file; keep it the same
+# every time (the app reads what is already saved there when it starts)
+DATA_DIR <- getwd()
+
+COHORT_FILE <- file.path(DATA_DIR, "sdh_validation_cohort.csv")
+SCREENING_FILE <- file.path(DATA_DIR, "sdh_screening.csv")
+extraction_file <- function(who) file.path(DATA_DIR, paste0("sdh_extraction_", gsub("[^A-Za-z0-9]", "_", who), ".csv"))
 
 EXCLUSION_REASONS <- c(
   "Follow-up CT (not the first CT showing the SDH)",
@@ -181,9 +186,12 @@ SHEET_COLUMNS <- unlist(lapply(VARIABLES, function(x) {
 # DATA
 # ---------------------------------------------------------------------
 
-dat <- if (exists("cohort")) cohort else
-  read.csv("sdh_validation_cohort.csv", stringsAsFactors = FALSE, check.names = FALSE)
-dat <- dat %>% arrange(stratum, screening_order)
+# the frozen cohort file (row_id is what links every saved decision to its
+# report, so the app always reads the saved file, not a rebuilt cohort)
+if (!file.exists(COHORT_FILE)) stop("Cohort file not found: ", COHORT_FILE)
+dat <- read.csv(COHORT_FILE, stringsAsFactors = FALSE, check.names = FALSE) %>%
+  arrange(stratum, screening_order)
+cat("Cohort:", nrow(dat), "reports  | saving to", DATA_DIR, "\n")
 
 read_or_empty <- function(path) {
   if (file.exists(path)) read.csv(path, stringsAsFactors = FALSE, check.names = FALSE,
@@ -268,6 +276,8 @@ ui <- fluidPage(
       br(),
       fluidRow(
         column(5,
+          radioButtons("e_stratum", NULL, inline = TRUE,
+                       choices = c("Traumatic" = "traumatic", "Non-traumatic" = "nontraumatic", "Both" = "both")),
           div(class = "ctx", uiOutput("e_context")),
           fluidRow(
             column(3, actionButton("e_prev", "< Prev", width = "100%")),
@@ -287,6 +297,13 @@ ui <- fluidPage(
               actionButton("e_save", "Save and next", class = "btn-primary", width = "100%"),
               br(), br(),
               actionButton("e_reset", "Reset all to NR", width = "100%")
+            ),
+            wellPanel(
+              h4("Not eligible after all?"),
+              p("Takes the report out of the sample and records why; screening then adds the next report in its place."),
+              selectInput("e_ex_reason", "Reason", choices = setdiff(EXCLUSION_REASONS, "Hospital cap reached"), width = "100%"),
+              textInput("e_ex_other", "Other reason (if Other)", width = "100%"),
+              actionButton("e_exclude", "Exclude and send back to screening", class = "btn-danger", width = "100%")
             )
           )
         )
@@ -398,9 +415,8 @@ server <- function(input, output, session) {
     row$imaging_result
   })
 
-  record_screening <- function(decision, reason = "") {
+  record_screening <- function(decision, reason = "", row = next_candidate()) {
     if (!nzchar(input$who)) { showNotification("Choose the extractor first.", type = "error"); return() }
-    row <- next_candidate()
     if (!nrow(row)) return()
     upsert(SCREENING_FILE, data.frame(
       row_id = row$row_id, stratum = row$stratum, screening_order = row$screening_order,
@@ -437,7 +453,21 @@ server <- function(input, output, session) {
 
   # ---------------- extraction
   idx <- reactiveVal(1)
-  queue <- reactive(included() %>% arrange(stratum, screening_order))
+  queue <- reactive({
+    q <- included() %>% arrange(stratum, screening_order)
+    if (input$e_stratum != "both") q <- filter(q, stratum == input$e_stratum)
+    q
+  })
+  observeEvent(input$e_stratum, idx(1))
+
+  observeEvent(input$e_exclude, {
+    row <- current()
+    if (is.null(row)) return()
+    reason <- if (input$e_ex_reason == "Other") paste("Other:", input$e_ex_other) else input$e_ex_reason
+    record_screening("Excluded", paste("During extraction:", reason), row = row)
+    showNotification(paste("Row", row$row_id, "excluded; screen the next report to replace it."),
+                     type = "warning", duration = 5)
+  })
 
   my_extractions <- reactive({
     input$e_save
