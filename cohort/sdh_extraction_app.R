@@ -122,6 +122,7 @@ VARIABLES <- c(
     v("tentorium_hematoma", "Tentorium", COMPART, "Tentorium SDH"),
     v("tentorium_description", "Tentorium", DESC, "Description"),
     v("tentorium_thickness_mm", "Tentorium", label = "Thickness (mm)", numeric = TRUE),
+    v("tentorium_density", "Tentorium", CDENS, "Density"),
     v("tentorium_acuity", "Tentorium", ACUITY, "Acuity"),
 
     v("mass_effect_present", "Mass effect and shift", GRADE, "Mass effect"),
