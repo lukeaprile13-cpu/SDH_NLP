@@ -141,18 +141,30 @@ if (!is.null(erdiag)) {
 # 3. Encounters that qualify, and their first head CT
 # ---------------------------------------------------------------------
 
+# date-times may arrive as text or already as date-times
+as_dt <- function(x) if (inherits(x, "POSIXt")) x else ymd_hms(as.character(x), truncated = 3, quiet = TRUE)
+
+# the admission / discharge time columns go by different names between
+# data cuts (admission_date_time, admit_date_time, ...): take what is there
+pick_col <- function(pattern) grep(pattern, names(admdad), value = TRUE)[1]
+admit_col <- pick_col("^admi(t|ssion).*date.*time$|^admi(t|ssion)_date")
+discharge_col <- pick_col("^discharge.*date.*time$|^discharge_date")
+cat("admission time column:", admit_col, " discharge time column:", discharge_col, "\n")
+if (is.na(admit_col)) stop("No admission time column in admdad: ", paste(names(admdad), collapse = ", "))
+
 enc <- admdad %>%
+  mutate(admit_date_time = as_dt(.data[[admit_col]]),
+         discharge_date_time = if (is.na(discharge_col)) NA else as_dt(.data[[discharge_col]])) %>%
   select(any_of(c("genc_id", "patient_id_hashed", "age", "gender", "hospital_num",
                   "admit_date_time", "discharge_date_time", "admit_category",
                   "discharge_disposition"))) %>%
   inner_join(sdh_info, by = "genc_id") %>%
-  mutate(admit_date_time = ymd_hms(admit_date_time, truncated = 3)) %>%
   filter(sdh_present_on_arrival, age >= MIN_AGE)
 
 ct_index <- ct_reports %>%
   filter(!is.na(imaging_result), trimws(imaging_result) != "",
          !grepl(CT_NAME_EXCLUDE, tolower(test_name_raw))) %>%
-  mutate(performed_date_time = ymd_hms(performed_date_time, truncated = 3)) %>%
+  mutate(performed_date_time = as_dt(performed_date_time)) %>%
   inner_join(select(enc, genc_id, admit_date_time), by = "genc_id") %>%
   mutate(hours_from_admit = as.numeric(difftime(performed_date_time, admit_date_time, units = "hours"))) %>%
   group_by(genc_id) %>%
