@@ -260,6 +260,13 @@ if (file.exists(DEVELOPMENT_FINGERPRINTS_FILE)) {
   dev_keys <- bind_rows(dev_keys, mutate(fp_file, dev_report = paste0("fp_", dev_report)))
 }
 
+# fingerprints pasted into the session (dev_keys_short <- c("...", ...))
+if (exists("dev_keys_short")) {
+  cat("Pasted development fingerprints:", length(dev_keys_short), "\n")
+  dev_keys <- bind_rows(dev_keys, data.frame(dev_report = paste0("paste_", seq_along(dev_keys_short)),
+                                             key = dev_keys_short))
+}
+
 if (nrow(dev_keys)) {
   # a cohort report is a development report when it holds one of that
   # report's stretches. A stretch found in more than 3 cohort reports is a
