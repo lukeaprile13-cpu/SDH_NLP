@@ -361,4 +361,5 @@ CASES = [
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the right tentorium and the falx.", dict(parafalcine_hematoma="Yes NS", tentorium_hematoma="Right")),
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the falx and right tentorium.", dict(parafalcine_description="Small", tentorium_description="Small", tentorium_hematoma="Right")),
 ("falx", "There is a small amount of subdural hemorrhage along the falx.", dict(laterality="Falx", parafalcine_description="Small")),
+("acuity", "There is a left subdural collection. There is acute hemorrhage within some lower density extra-axial fluid suggesting acute on chronic.", dict(L_acuity="Acute on chronic", L_hyperdense="Yes", L_hypodense="Yes", L_mixed_density="Yes")),
 ]
