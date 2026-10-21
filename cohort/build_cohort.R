@@ -47,7 +47,8 @@ DEVELOPMENT_IDS_FILE <- "development_genc_ids.csv"
 # 120-letter stretches per report, letters only) - made from all the
 # reports shared while building the NLP
 DEVELOPMENT_FINGERPRINTS_FILE <- "development_fingerprints.csv"
-DEVELOPMENT_REPORT_FILES <- c(
+DEVELOPMENT_REPORT_FILES <- character(0)   # or c("file1.xlsx", "file2.csv"), e.g.
+# c(
   # "Reports.CSV.xlsx",                    # first 50
   # "report_final_5.csv",                  # batch 9
   # "new13_reports.csv",
@@ -56,7 +57,7 @@ DEVELOPMENT_REPORT_FILES <- c(
   # "more_reports_1.xlsx", "more_reports_2.xlsx", "more_reports_3.xlsx",
   # "Claude_test_before_validation.xlsx",  # the latest version (holds all 27)
   # "LLM_Comparison.xlsx"
-)
+# )
 
 SEED <- 20261021
 OUTPUT_FILE <- "sdh_validation_cohort.csv"
@@ -234,6 +235,7 @@ read_reports <- function(path) {
   out[!is.na(out) & nchar(out) > 100]
 }
 
+DEVELOPMENT_REPORT_FILES <- as.character(DEVELOPMENT_REPORT_FILES)
 dev_files <- DEVELOPMENT_REPORT_FILES[file.exists(DEVELOPMENT_REPORT_FILES)]
 missing_files <- setdiff(DEVELOPMENT_REPORT_FILES, dev_files)
 if (length(missing_files)) warning("Development files not found: ", paste(missing_files, collapse = ", "))
