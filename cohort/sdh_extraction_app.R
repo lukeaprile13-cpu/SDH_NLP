@@ -333,6 +333,9 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
   screening <- reactiveVal(read_or_empty(SCREENING_FILE))
+  # bumped AFTER an extraction is written, so saved answers are re-read
+  # only once the file holds them
+  saved_version <- reactiveVal(0)
 
   # ---------------- screening
   included <- reactive({
@@ -367,8 +370,8 @@ server <- function(input, output, session) {
   # findings in the included reports, from the screener's own extraction
   finding_counts <- reactive({
     if (!nzchar(input$who)) return(NULL)
+    saved_version()
     ex <- read_or_empty(extraction_file(input$who))
-    input$e_save
     if (is.null(ex)) return(c(fracture = 0, falx_tentorium = 0, herniation = 0))
     ex <- ex %>% filter(as.integer(row_id) %in% included()$row_id)
     pos <- function(col) !(ex[[col]] %in% c("", "NR", "No"))
@@ -507,7 +510,7 @@ server <- function(input, output, session) {
   })
 
   my_extractions <- reactive({
-    input$e_save
+    saved_version()
     if (!nzchar(input$who)) return(NULL)
     read_or_empty(extraction_file(input$who))
   })
@@ -598,7 +601,15 @@ server <- function(input, output, session) {
     out$notes <- input$e_notes
 
     upsert(extraction_file(input$who), out)
-    showNotification(paste("Saved row", row$row_id, "for", input$who), type = "message", duration = 2)
+    # check it is really in the file before moving on
+    check <- read_or_empty(extraction_file(input$who))
+    if (is.null(check) || !(as.character(row$row_id) %in% check$row_id)) {
+      showNotification(paste("NOT saved - could not write", extraction_file(input$who)), type = "error", duration = NULL)
+      return()
+    }
+    saved_version(saved_version() + 1)
+    showNotification(paste("Saved row", row$row_id, "for", input$who, "to", basename(extraction_file(input$who))),
+                     type = "message", duration = 3)
     go(idx() + 1)
   })
 }
