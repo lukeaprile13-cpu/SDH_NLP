@@ -359,9 +359,9 @@ print(cohort %>% count(stratum, hospital_num, sort = TRUE) %>% group_by(stratum)
 if ("transferred_in" %in% names(cohort)) {
   cat("\nTransferred in / comparison wording (share of reports)\n")
   print(cohort %>% group_by(stratum) %>%
-          summarise(transferred_in = round(mean(transferred_in), 2),
-                    comparison_wording = round(mean(flag_comparison), 2),
-                    either = round(mean(transferred_in | flag_comparison), 2)))
+          summarise(either = round(mean(transferred_in | flag_comparison), 2),   # first: summarise
+                    transferred_in = round(mean(transferred_in), 2),             # replaces the columns
+                    comparison_wording = round(mean(flag_comparison), 2)))
 }
 cat("\nKeyword hints (share of reports)\n")
 print(cohort %>% group_by(stratum) %>% summarise(across(starts_with("hint_"), ~ round(mean(.x), 2))))
