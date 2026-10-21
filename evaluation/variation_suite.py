@@ -357,4 +357,6 @@ CASES = [
 ("mass effect", "Left subdural hematoma. There is distortion and right-sided displacement of both lateral ventricles.", dict(effacement_lateral_ventricle="Yes NS", l_ventricle_laterality="Bilateral")),
 ("sinus", "Left subdural hematoma. Fluid noted in the right sphenoid sinus which may be due to inflammatory sinus disease.", dict(sphenoid_sinus="Fluid", paranal_sinuses="NR")),
 ("mass effect", "Left subdural hematoma. There is mass effect with sulcal effacement and mild effacement of the right ventricle.", dict(effacement_sulci_laterality="NR")),
+("thickness", "There is a hyperdense subdural hematoma over the left cerebral convexity and left tentorium. The component overlying the left cerebral convexity measures 11-mm and the tentorial component measures 15-mm.", dict(L_thickness_mm=11.0, tentorium_thickness_mm=15.0)),
+("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the right tentorium and the falx.", dict(parafalcine_hematoma="Yes NS", tentorium_hematoma="Right")),
 ]
