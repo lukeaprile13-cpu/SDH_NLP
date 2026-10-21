@@ -43,6 +43,10 @@ CT_NAME_EXCLUDE <- "angio|cta\\b|perfusion|venogra|spine|neck|facial|sinus|orbit
 # their text (csv or xlsx; the report column is found automatically) -
 # a cohort report whose text matches one of them is removed
 DEVELOPMENT_IDS_FILE <- "development_genc_ids.csv"
+# fingerprints of every report used in development (column "key": three
+# 120-letter stretches per report, letters only) - made from all the
+# reports shared while building the NLP
+DEVELOPMENT_FINGERPRINTS_FILE <- "development_fingerprints.csv"
 DEVELOPMENT_REPORT_FILES <- c(
   # "Reports.CSV.xlsx",                    # first 50
   # "report_final_5.csv",                  # batch 9
@@ -234,6 +238,8 @@ dev_files <- DEVELOPMENT_REPORT_FILES[file.exists(DEVELOPMENT_REPORT_FILES)]
 missing_files <- setdiff(DEVELOPMENT_REPORT_FILES, dev_files)
 if (length(missing_files)) warning("Development files not found: ", paste(missing_files, collapse = ", "))
 
+dev_keys <- character(0)
+
 if (length(dev_files)) {
   dev_text <- unlist(lapply(dev_files, read_reports))
   dev_keys <- unique(unlist(lapply(fingerprint(dev_text), function(f) {
@@ -243,14 +249,24 @@ if (length(dev_files)) {
     starts <- unique(c(1, floor((n - 120) / 2) + 1, n - 119))
     substring(f, starts, starts + 119)
   })))
+  cat("Development reports read from files:", length(dev_text), "\n")
+}
+
+if (file.exists(DEVELOPMENT_FINGERPRINTS_FILE)) {
+  fp_file <- read.csv(DEVELOPMENT_FINGERPRINTS_FILE, colClasses = "character")
+  cat("Development reports in the fingerprint file:", length(unique(fp_file$dev_report)), "\n")
+  dev_keys <- unique(c(dev_keys, fp_file$key))
+}
+
+if (length(dev_keys)) {
   cohort_fp <- fingerprint(cohort$imaging_result)
   is_dev <- Reduce(`|`, lapply(dev_keys, grepl, x = cohort_fp, fixed = TRUE), FALSE)
-  cat("Development reports read:", length(dev_text), " matched in the cohort:", sum(is_dev), "\n")
+  cat("Matched in the cohort:", sum(is_dev), "\n")
   excluded_dev <- excluded_dev + sum(is_dev)
   cohort <- cohort[!is_dev, ]
 }
 
-if (!file.exists(DEVELOPMENT_IDS_FILE) && !length(dev_files)) {
+if (!file.exists(DEVELOPMENT_IDS_FILE) && !length(dev_keys)) {
   warning("No development ids or files: reports used to build the NLP are not excluded yet.")
 }
 cat("Development reports removed:", excluded_dev, "\n")
