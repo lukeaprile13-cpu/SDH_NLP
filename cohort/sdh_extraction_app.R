@@ -77,7 +77,7 @@ FX_LOC   <- c("NR", "No", "Calvarial", "Facial", "Skull base", "Calvarial & Faci
 FX_TYPE  <- c("NR", "Linear", "Non-displaced", "Displaced", "Depressed", "Comminuted")
 SINUS    <- c("NR", "Clear", "Mild mucosal thickening", "Moderate mucosal thickening",
               "Mucosal thickening NS", "Mild opacification", "Severe opacification",
-              "Opacification NS", "Retention cyst", "Fluid")
+              "Opacification NS", "Retention cyst", "Fluid", "Hemorrhage")
 
 v <- function(name, group, choices = NULL, label = NULL, numeric = FALSE) {
   list(name = name, group = group, choices = choices,
