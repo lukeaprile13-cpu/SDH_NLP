@@ -27,7 +27,8 @@ library(dplyr)
 # SETTINGS
 # ---------------------------------------------------------------------
 
-EXTRACTORS <- c("Student 1", "Student 2", "Radiologist 1", "Radiologist 2")
+EXTRACTORS <- c("Student 1", "Student 2", "Student 3", "Student 4", "Student 5",
+                "Radiologist 1", "Radiologist 2")
 
 TARGET_PER_STRATUM <- 75
 HOSPITAL_CAP_STRATUM <- 11      # 15% of 75
@@ -304,7 +305,10 @@ ui <- fluidPage(
               h4("Finish"),
               checkboxInput("e_flag", "Flag this report for discussion"),
               textAreaInput("e_notes", "Notes", width = "100%", height = "70px"),
-              actionButton("e_save", "Save and next", class = "btn-primary", width = "100%"),
+              fluidRow(
+                column(6, actionButton("e_save_stay", "Save and stay", class = "btn-primary", width = "100%")),
+                column(6, actionButton("e_save", "Save and next", class = "btn-primary", width = "100%"))
+              ),
               br(), br(),
               actionButton("e_reset", "Reset all to NR", width = "100%")
             ),
@@ -572,7 +576,8 @@ server <- function(input, output, session) {
     }
   })
 
-  observeEvent(input$e_save, {
+  # save this report; "Save and next" then moves on, "Save and stay" does not
+  save_current <- function(advance) {
     if (!nzchar(input$who)) { showNotification("Choose the extractor first.", type = "error"); return() }
     row <- current()
     if (is.null(row)) return()
@@ -610,8 +615,11 @@ server <- function(input, output, session) {
     saved_version(saved_version() + 1)
     showNotification(paste("Saved row", row$row_id, "for", input$who, "to", basename(extraction_file(input$who))),
                      type = "message", duration = 3)
-    go(idx() + 1)
-  })
+    if (advance) go(idx() + 1)
+  }
+
+  observeEvent(input$e_save, save_current(advance = TRUE))
+  observeEvent(input$e_save_stay, save_current(advance = FALSE))
 }
 
 shinyApp(ui, server)
