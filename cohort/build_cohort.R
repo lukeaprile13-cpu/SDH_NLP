@@ -61,6 +61,9 @@ DEVELOPMENT_REPORT_FILES <- character(0)   # or c("file1.xlsx", "file2.csv"), e.
 
 SEED <- 20261021
 OUTPUT_FILE <- "sdh_validation_cohort.csv"
+# the development reports found in the cohort (removed from it above): the
+# training set, extracted with sdh_development_app.R
+DEVELOPMENT_OUTPUT_FILE <- "sdh_development_reports.csv"
 
 
 # ---------------------------------------------------------------------
@@ -218,10 +221,13 @@ cohort <- cohort %>%
   ungroup()
 
 excluded_dev <- 0
+# every removed development report is kept here (the training set)
+development_reports <- cohort[0, ]
 
 if (file.exists(DEVELOPMENT_IDS_FILE)) {
   dev_ids <- read.csv(DEVELOPMENT_IDS_FILE, colClasses = "character")$genc_id
   before <- nrow(cohort)
+  development_reports <- bind_rows(development_reports, filter(cohort, as.character(genc_id) %in% dev_ids))
   cohort <- filter(cohort, !(as.character(genc_id) %in% dev_ids))
   excluded_dev <- excluded_dev + before - nrow(cohort)
 }
@@ -294,6 +300,7 @@ if (nrow(dev_keys)) {
       length(unique(dev_keys$dev_report[!stock & colSums(hits) > 0])),
       " cohort reports removed:", sum(is_dev), "\n")
   excluded_dev <- excluded_dev + sum(is_dev)
+  development_reports <- bind_rows(development_reports, cohort[is_dev, ])
   cohort <- cohort[!is_dev, ]
 }
 
@@ -343,7 +350,42 @@ cohort <- cohort %>%
            hours_from_admit) %>%
   relocate(imaging_result, .after = last_col())
 
-write.csv(cohort, OUTPUT_FILE, row.names = FALSE, na = "")
+# the cohort file is frozen once screening starts (row_id links every saved
+# decision to its report): never overwrite it. A rebuild that matches it
+# leaves it alone; one that differs is written beside it for checking.
+if (file.exists(OUTPUT_FILE)) {
+  frozen <- read.csv(OUTPUT_FILE, colClasses = "character")
+  same <- nrow(frozen) == nrow(cohort) &&
+    all(trimws(frozen$row_id) == as.character(cohort$row_id)) &&
+    all(trimws(frozen$genc_id) == trimws(as.character(cohort$genc_id)))
+  if (same) {
+    cat("The rebuilt cohort matches", OUTPUT_FILE, "- the frozen file is left as it is.\n")
+  } else {
+    rebuilt_file <- sub("\\.csv$", "_rebuilt.csv", OUTPUT_FILE)
+    write.csv(cohort, rebuilt_file, row.names = FALSE, na = "")
+    warning("The rebuilt cohort differs from ", OUTPUT_FILE, ": written to ", rebuilt_file,
+            ". The frozen file is unchanged and is still the one the app uses.")
+  }
+} else {
+  write.csv(cohort, OUTPUT_FILE, row.names = FALSE, na = "")
+}
+
+# the development reports: their own random order within each stratum
+# (own seed, so the validation order above is unchanged)
+set.seed(SEED + 1)
+development_reports <- development_reports %>%
+  distinct(genc_id, .keep_all = TRUE) %>%
+  group_by(stratum) %>%
+  mutate(dev_order = sample(n())) %>%
+  ungroup() %>%
+  arrange(stratum, dev_order) %>%
+  mutate(row_id = row_number()) %>%
+  relocate(row_id, stratum, dev_order, genc_id, patient_id_hashed, hospital_num,
+           age, gender, test_name_raw, performed_date_time) %>%
+  relocate(imaging_result, .after = last_col())
+write.csv(development_reports, DEVELOPMENT_OUTPUT_FILE, row.names = FALSE, na = "")
+cat("Development reports written to", DEVELOPMENT_OUTPUT_FILE, ":", nrow(development_reports), "\n")
+print(count(development_reports, stratum))
 
 
 # ---------------------------------------------------------------------
