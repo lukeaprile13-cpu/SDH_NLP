@@ -240,6 +240,44 @@ group_panel <- function(group) {
 
 GROUPS <- unique(vapply(VARIABLES, `[[`, "", "group"))
 
+# highlighting: select text in a report to mark it yellow; click a mark to
+# remove it. Only on screen (not saved); a new report starts clean.
+highlight_js <- tags$script(HTML("
+  document.addEventListener('mouseup', function (e) {
+    var box = e.target.closest ? e.target.closest('.report-box') : null;
+    if (!box) return;
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) return;
+    var range = sel.getRangeAt(0);
+    if (!box.contains(range.commonAncestorContainer)) return;
+    var mark = document.createElement('mark');
+    mark.className = 'hl';
+    mark.appendChild(range.extractContents());
+    range.insertNode(mark);
+    sel.removeAllRanges();
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target.classList && e.target.classList.contains('hl') && window.getSelection().isCollapsed) {
+      var m = e.target;
+      m.replaceWith.apply(m, Array.prototype.slice.call(m.childNodes));
+    }
+  });
+  function clearHighlights(id) {
+    document.querySelectorAll('#' + id + ' mark.hl').forEach(function (m) {
+      m.replaceWith.apply(m, Array.prototype.slice.call(m.childNodes));
+    });
+  }
+"))
+
+report_box <- function(id) {
+  tagList(
+    div(style = "text-align:right; margin-bottom:4px;",
+        tags$button(type = "button", class = "btn btn-default btn-xs",
+                    onclick = paste0("clearHighlights('", id, "')"), "Clear highlights")),
+    div(class = "report-box", style = report_style, uiOutput(id))
+  )
+}
+
 ui <- fluidPage(
   tags$head(tags$style(HTML("
     body { font-family: 'Segoe UI', Arial, sans-serif; background:#f5f5f5; }
@@ -247,8 +285,9 @@ ui <- fluidPage(
     .well { padding:10px 14px; margin-bottom:10px; }
     .well h4 { margin-top:0; color:#1B3A5C; }
     .form-group { margin-bottom:6px; }
+    mark.hl { background:#ffeb3b; padding:0; cursor:pointer; }
     .count { font-size:15px; }
-  "))),
+  ")), highlight_js),
   titlePanel("SDH validation: screening and extraction"),
   fluidRow(column(4, selectInput("who", "Extractor (choose before you start; saved with every report)",
                                  choices = c("Choose..." = "", EXTRACTORS)))),
@@ -278,7 +317,7 @@ ui <- fluidPage(
           checkboxInput("s_supplement", "Supplementary sample (stratum full: include only reports with a finding still under the minimum)"),
           actionButton("s_undo", "Undo last decision", width = "100%")
         ),
-        column(9, div(class = "ctx", uiOutput("s_context")), div(style = report_style, uiOutput("s_report")))
+        column(9, div(class = "ctx", uiOutput("s_context")), report_box("s_report"))
       )
     ),
 
@@ -296,7 +335,7 @@ ui <- fluidPage(
             column(3, numericInput("e_goto", NULL, value = 1, min = 1, width = "100%")),
             column(3, actionButton("e_jump", "Go", width = "100%"))
           ),
-          div(style = report_style, uiOutput("e_report"))
+          report_box("e_report")
         ),
         column(7,
           div(style = "max-height:80vh; overflow-y:auto; padding-right:6px;",
