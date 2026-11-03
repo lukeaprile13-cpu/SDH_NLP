@@ -5,6 +5,11 @@ Frozen on 2026-10-22 for the validation study (v1.2: mixed density only when the
 - Code version: commit cb30bc1 (branch claude/peaceful-lovelace-5czfzi)
 - Constructed test cases: PASS 353/353
 
+**v1.3 in progress (not frozen).** The notebooks have changed since v1.2 (see
+V1.3_CHANGES.md), so their hashes below are the v1.2 ones and will not match the
+current files. To get the exact v1.2 code, check out commit cb30bc1. v1.3 gets
+its own hashes here when it is frozen, before the validation run.
+
 | File | What it is | SHA-256 |
 | --- | --- | --- |
 | NLP_v5.ipynb | NLP; runs a CSV of reports and validates against human values | 3ff718b3e55c84c071b1b54580f68ab6925ba6431d8c497cb3984e65b86016b1 |
