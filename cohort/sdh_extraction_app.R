@@ -75,7 +75,11 @@ CDENS    <- c("NR", "Hyperdense", "Hypodense", "Isodense", "Mixed")
 INFARCT  <- c("NR", "Yes Acute", "Yes Chronic", "Yes NS", "No Acute", "No NS")
 FX_LOC   <- c("NR", "No", "Calvarial", "Facial", "Skull base", "Calvarial & Facial",
               "Calvarial & Skull base", "Facial & Skull base", "Calvarial & Facial & Skull base")
-FX_TYPE  <- c("NR", "Linear", "Non-displaced", "Displaced", "Depressed", "Comminuted")
+# fractures: displacement and pattern are separate columns; with several
+# fractures, the worst of each (Displaced > Non-displaced;
+# Depressed & comminuted > Comminuted > Depressed > Linear)
+FX_DISP    <- c("NR", "Displaced", "Non-displaced")
+FX_PATTERN <- c("NR", "Linear", "Depressed", "Comminuted", "Depressed & comminuted")
 SINUS    <- c("NR", "Clear", "Mild mucosal thickening", "Moderate mucosal thickening",
               "Mucosal thickening NS", "Mild opacification", "Severe opacification",
               "Opacification NS", "Retention cyst", "Fluid", "Hemorrhage")
@@ -165,7 +169,8 @@ VARIABLES <- c(
 
     v("bony_lesion", "Bone, scalp, orbit", YN, "Fracture (bony lesion)"),
     v("fracture_location", "Bone, scalp, orbit", FX_LOC, "Fracture location"),
-    v("fracture_type_ordinal", "Bone, scalp, orbit", FX_TYPE, "Fracture type"),
+    v("fracture_displacement", "Bone, scalp, orbit", FX_DISP, "Fracture displacement"),
+    v("fracture_pattern", "Bone, scalp, orbit", FX_PATTERN, "Fracture pattern"),
     v("scalp_hematoma", "Bone, scalp, orbit", YN, "Scalp hematoma"),
     v("soft_tissue_lesion", "Bone, scalp, orbit", YN, "Soft tissue lesion"),
     v("orbital_lesion", "Bone, scalp, orbit", YN, "Orbital lesion"),
