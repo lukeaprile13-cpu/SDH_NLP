@@ -392,4 +392,40 @@ CASES = [
 ("density", "Heterogeneous left subdural hematoma.", dict(L_mixed_density="Yes")),
 ("falx", "There is a small subdural hematoma along the left side of the falx.", dict(laterality="Left", parafalcine_hematoma="Left")),
 ("falx", "There is a small subdural hematoma to the right of the anterior falx.", dict(laterality="Right", parafalcine_hematoma="Right")),
+
+# ------------------------------------------------------------ v1.3
+# 1 sides listed as "Side: size"; a finding before a colon is not a heading
+("v1.3", "Bilateral frontoparietal subdural hematomas. -Right: small. 10 mm thickness. -Left: small to moderate. 20 mm thickness.", dict(R_description="Small", R_thickness_mm="10", L_description="Medium", L_thickness_mm="20")),
+("v1.3", "Bilateral subdural hematomas. Right: small, 10 mm. Left: small to moderate, 20 mm.", dict(R_description="Small", R_thickness_mm="10", L_description="Medium", L_thickness_mm="20")),
+("v1.3", "Acute left SDH: 10 mm.", dict(laterality="Left", L_acuity="Acute")),
+("v1.3", "Left SDH. Right: mastoid opacification.", dict(laterality="Left", mastoid_air_cells="Opacification NS")),
+# 2 "background of" is not a dominance word
+("v1.3", "Bilateral frontoparietal SDH. Mixed density, with hyperdense and isodense streaky recent components upon background of low-density chronic component.", dict(L_density_dominance="NR", R_density_dominance="NR", L_hypodense="Yes")),
+# 3 a size word is shared only within one phrase
+("v1.3", "Bilateral SDH. There is also a thin parafalcine line and right tentorial subdural hematoma.", dict(parafalcine_description="Small", tentorium_description="NR", tentorium_hematoma="Right")),
+("v1.3", "Left SDH. A small SDH along the falx and right tentorium.", dict(parafalcine_description="Small", tentorium_description="Small")),
+("v1.3", "Left SDH. Small parafalcine and tentorial SDH.", dict(parafalcine_description="Small", tentorium_description="Small")),
+("v1.3", "Left SDH. Thin parafalcine SDH and right tentorial SDH.", dict(parafalcine_description="Small", tentorium_description="NR")),
+# 6 falx / tentorium words next to a second bleed
+("v1.3", "Trace acute subdural hematoma along the anterior falx and subarachnoid hemorrhage involving the left parietal lobe.", dict(parafalcine_acuity="Acute", parafalcine_description="Small", subarachnoid_hemorrhage="Yes")),
+("v1.3", "Left SDH. Small acute SDH along the falx and subarachnoid hemorrhage.", dict(parafalcine_acuity="Acute", parafalcine_description="Small")),
+("v1.3", "Small subdural hematoma along the tentorium and acute subarachnoid hemorrhage.", dict(tentorium_description="Small", tentorium_acuity="NR", subarachnoid_hemorrhage="Yes")),
+# 7 "no acute abnormality of the ..." = clear
+("v1.3", "Left SDH. No acute abnormality of the orbits, paranasal sinuses or mastoid air cells.", dict(orbital_lesion="No", paranal_sinuses="Clear", mastoid_air_cells="Clear")),
+# 10 an extension takes the side of a one-sided SDH, and its own thickness
+("v1.3", "Left subdural hematoma, measuring up to 13 mm anteriorly. There is extension along the midline falx, measuring 3 mm.", dict(L_thickness_mm="13", parafalcine_hematoma="Left", parafalcine_thickness_mm="3")),
+("v1.3", "Left SDH. Mild extension along the anterior falx.", dict(parafalcine_hematoma="Left", parafalcine_location="Anterior")),
+("v1.3", "Right SDH. There is extension along the tentorium measuring 4 mm.", dict(tentorium_hematoma="Right", tentorium_thickness_mm="4")),
+("v1.3", "Bilateral SDH, right 19 mm and left 11 mm. There is extension along the falx.", dict(parafalcine_hematoma="Yes NS")),
+("v1.3", "Left SDH. It extends to the right side of the falx.", dict(parafalcine_hematoma="Right")),
+("v1.3", "Left SDH. Acute SDH along the falx.", dict(parafalcine_hematoma="Yes NS", parafalcine_acuity="Acute")),
+# 11 / 12 intracerebral = intraparenchymal
+("v1.3", "Left SDH. Small right frontal intracerebral hemorrhage.", dict(laterality="Left", parenchymal_hemorrhage="Yes", R_description="NR", R_frontal_lobe="NR")),
+("v1.3", "Left SDH. No intracerebral hemorrhage.", dict(parenchymal_hemorrhage="No", subarachnoid_hemorrhage="NR", intraventricular_hemorrhage="NR")),
+("v1.3", "Left SDH. No other ICH.", dict(parenchymal_hemorrhage="No", subarachnoid_hemorrhage="NR")),
+# 14 fluid density = low density
+("v1.3", "Large left subdural collection, predominantly fluid density, with peripheral high density.", dict(L_hypodense="Yes", L_density_dominance="Hypodense", L_hyperdense="Yes")),
+("v1.3", "Left subdural collection of CSF attenuation.", dict(L_hypodense="Yes")),
+# British spelling
+("v1.3", "Acute left subdural haematoma, 8 mm. Subarachnoid haemorrhage in the left parietal lobe.", dict(L_acuity="Acute", L_thickness_mm="8", subarachnoid_hemorrhage="Yes")),
 ]
