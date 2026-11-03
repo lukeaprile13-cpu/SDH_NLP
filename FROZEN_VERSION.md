@@ -15,8 +15,8 @@ its own hashes here when it is frozen, before the validation run.
 | NLP_v5.ipynb | NLP; runs a CSV of reports and validates against human values | 3ff718b3e55c84c071b1b54580f68ab6925ba6431d8c497cb3984e65b86016b1 |
 | NLP_v5_single_report.ipynb | Same NLP; runs one report and prints it | 11afe58ff1cda8914397faecc7108621fa4a42fe3c12989de6bd678b7bf25594 |
 | cohort/build_cohort.R | Builds the validation cohort (GEMINI) | f0e8e7fb9bbbfa6044bb5fa4834c08fa1c8a3f926d92203b6131de1fde22464a |
-| cohort/sdh_extraction_app.R | Screening and extraction app | 858c5c7532f0942ea5d4123a79727003bfbd8184e8073775d9535dae4ea0f3fd |
-| cohort/sdh_development_app.R | Development (training) set extraction app | 6a90186904b462b6645a96552e6d9d1c121e6b5ef87682aff608371a65d1ddc0 |
+| cohort/sdh_extraction_app.R | Screening and extraction app | 1b55257a87ac15378d2a3fc138387dd5aafd0dd29ef66baa52b1f869a03ac4b1 |
+| cohort/sdh_development_app.R | Development (training) set extraction app | 5a365942c6ca4157f6ed4b2f13f996b934c276ef1d27eaddaaa7bf5b87879de1 |
 | evaluation/ | Test suite and scoring scripts | |
 
 To check a copy is the frozen one, compare its SHA-256 with the table

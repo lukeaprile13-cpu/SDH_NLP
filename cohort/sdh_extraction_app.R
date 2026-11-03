@@ -72,7 +72,8 @@ DOMINANT <- c("NR", "Hyperdense", "Hypodense", "Isodense")
 INTERNAL <- c("NR", "Septations", "Dependant", "Layering")
 COMPART  <- c("NR", "Yes NS", "Left", "Right", "Bilateral", "No")
 CDENS    <- c("NR", "Hyperdense", "Hypodense", "Isodense", "Mixed")
-INFARCT  <- c("NR", "Yes Acute", "Yes Chronic", "Yes NS", "No Acute", "No NS")
+# "Yes Chronic, No Acute": a chronic infarct and "no acute infarct" for the same column
+INFARCT  <- c("NR", "Yes Acute", "Yes Chronic", "Yes Chronic, No Acute", "Yes NS", "No Acute", "No NS")
 FX_LOC   <- c("NR", "No", "Calvarial", "Facial", "Skull base", "Calvarial & Facial",
               "Calvarial & Skull base", "Facial & Skull base", "Calvarial & Facial & Skull base")
 # fractures: displacement and pattern are separate columns; with several
