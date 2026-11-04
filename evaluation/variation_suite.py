@@ -428,4 +428,7 @@ CASES = [
 ("v1.3", "Left subdural collection of CSF attenuation.", dict(L_hypodense="Yes")),
 # British spelling
 ("v1.3", "Acute left subdural haematoma, 8 mm. Subarachnoid haemorrhage in the left parietal lobe.", dict(L_acuity="Acute", L_thickness_mm="8", subarachnoid_hemorrhage="Yes")),
+# density dominance with two densities (the apps offer these two values)
+("v1.3", "Left SDH, predominantly hypo to isodense.", dict(L_density_dominance="Hypo/Isodense")),
+("v1.3", "Right SDH, predominantly iso to hyperdense.", dict(R_density_dominance="Iso/Hyperdense")),
 ]
