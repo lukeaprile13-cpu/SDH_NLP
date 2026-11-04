@@ -43,6 +43,10 @@ COHORT_FILE <- file.path(DATA_DIR, "sdh_validation_cohort.csv")
 SCREENING_FILE <- file.path(DATA_DIR, "sdh_screening.csv")
 extraction_file <- function(who) file.path(DATA_DIR, paste0("sdh_extraction_", gsub("[^A-Za-z0-9]", "_", who), ".csv"))
 
+# each report is extracted by at most two students (radiologists: no limit)
+STUDENT_LIMIT <- 2
+is_student <- function(who) grepl("^Student", who)
+
 # A report that compares with an earlier (outside) study is NOT excluded: it
 # is the first CT in the data for the encounter. Tick "compares with a prior
 # study" instead. Post-operative reports are excluded.
@@ -219,6 +223,16 @@ upsert <- function(path, row) {
                      mutate(row, across(everything(), as.character)))
   }
   write.csv(row, path, row.names = FALSE, na = "")
+}
+
+# how many students other than `who` have saved each report
+other_students <- function(row_ids, who) {
+  n <- integer(length(row_ids))
+  for (s in setdiff(EXTRACTORS[is_student(EXTRACTORS)], who)) {
+    ex <- read_or_empty(extraction_file(s))
+    if (!is.null(ex)) n <- n + (as.character(row_ids) %in% ex$row_id)
+  }
+  n
 }
 
 
@@ -532,8 +546,11 @@ server <- function(input, output, session) {
   # ---------------- extraction
   idx <- reactiveVal(1)
   queue <- reactive({
+    saved_version()
     q <- included() %>% arrange(stratum, screening_order)
     if (input$e_stratum != "both") q <- filter(q, stratum == input$e_stratum)
+    # a student does not see reports two other students have already done
+    if (is_student(input$who)) q <- q[other_students(q$row_id, input$who) < STUDENT_LIMIT, , drop = FALSE]
     q
   })
   observeEvent(input$e_stratum, idx(1))
@@ -599,7 +616,9 @@ server <- function(input, output, session) {
       p(strong("Report "), min(idx(), nrow(q)), " of ", nrow(q),
         strong(" | row "), row$row_id, strong(" | "), row$stratum,
         if (is_done) span(style = "color:#2e7d32;", " | saved") else span(style = "color:#c62828;", " | not saved")),
-      p(strong("Done by "), if (nzchar(input$who)) input$who else "(choose extractor)", ": ", done, " of ", nrow(q))
+      p(strong("Done by "), if (nzchar(input$who)) input$who else "(choose extractor)", ": ", done, " of ", nrow(q),
+        strong(" | students on this report: "), sum(other_students(row$row_id, "")), " of ", STUDENT_LIMIT),
+      if (is_student(input$who)) p(em("Reports two other students have done are not shown."))
     )
   })
 
@@ -626,6 +645,12 @@ server <- function(input, output, session) {
     if (!nzchar(input$who)) { showNotification("Choose the extractor first.", type = "error"); return() }
     row <- current()
     if (is.null(row)) return()
+    if (is_student(input$who) && other_students(row$row_id, input$who) >= STUDENT_LIMIT) {
+      showNotification(paste("Not saved: two other students have already extracted row", row$row_id,
+                             "- it is a radiologist's now. Move on to the next report."),
+                       type = "error", duration = NULL)
+      return()
+    }
 
     values <- list()
     for (x in VARIABLES) {
@@ -660,7 +685,11 @@ server <- function(input, output, session) {
     saved_version(saved_version() + 1)
     showNotification(paste("Saved row", row$row_id, "for", input$who, "to", basename(extraction_file(input$who))),
                      type = "message", duration = 3)
-    if (advance) go(idx() + 1)
+    # the list can change after a save (reports two others have finished
+    # drop out), so find this report again before moving on
+    pos <- match(as.character(row$row_id), as.character(queue()$row_id))
+    if (is.na(pos)) pos <- idx()
+    go(if (advance) pos + 1 else pos)
   }
 
   observeEvent(input$e_save, save_current(advance = TRUE))
