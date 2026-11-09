@@ -431,4 +431,14 @@ CASES = [
 # density dominance with two densities (the apps offer these two values)
 ("v1.3", "Left SDH, predominantly hypo to isodense.", dict(L_density_dominance="Hypo/Isodense")),
 ("v1.3", "Right SDH, predominantly iso to hyperdense.", dict(R_density_dominance="Iso/Hyperdense")),
+# 17 "non-depressed" is not depressed; 18 bone groups from the radiologist's reference
+("v1.3", "Left SDH. Non-depressed fracture of the left parietal bone.", dict(fracture_pattern="NR", fracture_location="Calvarial")),
+("v1.3", "There is a non-depressed longitudinal left temporal bone fracture, traversing the mastoid air cells, external auditory canal, and middle ear cavity, with blood within these spaces. There is a similar longitudinal fracture involving the right temporal bone. The temporal bone fractures extend medially along the petrous apices.", dict(bony_lesion="Yes", fracture_location="Skull base", fracture_pattern="NR", fracture_displacement="NR", mastoid_air_cells="Hemorrhage")),
+("v1.3", "Left SDH. Fracture of the left temporal bone.", dict(fracture_location="Calvarial")),
+("v1.3", "Left SDH. Nondisplaced fracture of the left temporal bone involving the mastoid air cells.", dict(fracture_location="Skull base", fracture_displacement="Non-displaced")),
+("v1.3", "Left SDH. Fracture of the squamous left temporal bone extending into the mastoid.", dict(fracture_location="Calvarial & Skull base")),
+("v1.3", "Left SDH. Fracture of the right pterygoid plate.", dict(fracture_location="Skull base")),
+("v1.3", "Left SDH. Fracture of the left lacrimal bone.", dict(fracture_location="Facial")),
+("v1.3", "Left SDH. Fracture through the left external auditory canal.", dict(fracture_location="Skull base")),
+("v1.3", "Left SDH. Left temporal bone fracture. Right parietal bone fracture.", dict(fracture_location="Calvarial")),
 ]
