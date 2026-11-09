@@ -354,7 +354,7 @@ CASES = [
 ("fracture", "Left subdural hematoma. Abnormal texture of the skull bones, likely related to renal osteodystrophy.", dict(bony_lesion="NR")),
 ("negation", "Left subdural hematoma. No new extra-axial hemorrhage.", dict(subarachnoid_hemorrhage="NR")),
 ("falx", "There is an acute subdural hematoma along the falx measuring up to 8 mm.", dict(laterality="Falx", parafalcine_hematoma="Yes NS", parafalcine_acuity="Acute", parafalcine_thickness_mm=8.0)),
-("falx", "There is an acute subdural hematoma on the left paramedian aspect of the high convexity measuring up to 8 mm thick.", dict(laterality="Falx", parafalcine_hematoma="Yes NS", parafalcine_thickness_mm=8.0)),
+("falx", "There is an acute subdural hematoma on the left paramedian aspect of the high convexity measuring up to 8 mm thick.", dict(laterality="Left", parafalcine_hematoma="Left", parafalcine_thickness_mm=8.0)),
 ("falx", "Left convexity subdural hematoma with extension along the falx.", dict(laterality="Left")),
 ("infarct", "Left subdural hematoma. No hyperdense vessel sign to suggest acute cortical infarction. Stable chronic infarcts within the left occipital lobe.", dict(unspecified__infarct="Yes Chronic, No Acute")),
 # a chronic infarct and "no acute infarct" in the same column: both are recorded
@@ -441,4 +441,18 @@ CASES = [
 ("v1.3", "Left SDH. Fracture of the left lacrimal bone.", dict(fracture_location="Facial")),
 ("v1.3", "Left SDH. Fracture through the left external auditory canal.", dict(fracture_location="Skull base")),
 ("v1.3", "Left SDH. Left temporal bone fracture. Right parietal bone fracture.", dict(fracture_location="Calvarial")),
+# 15 "supratentorial" does not break the midline shift grade
+("v1.3", "Left SDH. Mild supratentorial midline shift to the right.", dict(midline_shift_present="Mild", midline_shift_direction="Right")),
+# 16 "high convexity" read as the falx keeps the side
+("v1.3", "Acute subdural hematoma along the left high convexity.", dict(parafalcine_hematoma="Left", laterality="Left", parafalcine_acuity="Acute")),
+("v1.3", "Acute subdural hematoma along the high convexity.", dict(parafalcine_hematoma="Yes NS", laterality="Falx")),
+# 19 / 20 falx location from measurements; extensions take the SDH's age; "near vertex" is the falx's
+("v1.3", "Acute right SDH, 7 mm. The hemorrhage extends along the right interhemispheric fissure with maximum thickness of 6 mm anteriorly and near vertex, and 5 mm posteriorly. Further extension of the hemorrhage along the right tentorium cerebelli is evident.", dict(parafalcine_hematoma="Right", parafalcine_location="Anterior/posterior", parafalcine_thickness_mm="6", parafalcine_acuity="Acute", tentorium_hematoma="Right", tentorium_acuity="Acute", R_vertex="NR")),
+("v1.3", "Acute left SDH. It extends along the falx.", dict(parafalcine_hematoma="Left", parafalcine_acuity="Acute")),
+("v1.3", "Acute on chronic left SDH. It extends along the tentorium, where it is subacute.", dict(tentorium_acuity="Subacute")),
+("v1.3", "Chronic left SDH. Acute SDH along the falx.", dict(parafalcine_acuity="Acute")),
+("v1.3", "Left SDH. The hemorrhage extends to the vertex.", dict(L_vertex="Yes")),
+# 21 subcutaneous swelling is soft tissue, not edema
+("v1.3", "Right SDH. There is mild right frontoparietal subcutaneous swelling and small scalp hematoma.", dict(parenchymal_edema="NR", soft_tissue_lesion="Yes", scalp_hematoma="Yes")),
+("v1.3", "Right SDH. Diffuse cerebral swelling.", dict(parenchymal_edema="Yes")),
 ]
