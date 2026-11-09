@@ -12,7 +12,7 @@ CASES = [
 ("laterality", "Subdural hematomas on both sides.", dict(laterality="Bilateral")),
 ("laterality", "There are bihemispheric subdural collections.", dict(laterality="Bilateral")),
 ("laterality", "Bifrontal subdural hematomas.", dict(laterality="Bilateral", L_frontal_lobe="Yes", R_frontal_lobe="Yes")),
-("laterality", "There is a right subdural hematoma and a smaller left subdural hematoma.", dict(laterality="Bilateral", L_description="Small")),
+("laterality", "There is a right subdural hematoma and a smaller left subdural hematoma.", dict(laterality="Bilateral", L_description="NR")),  # v1.3: "smaller" is not a size
 ("laterality", "There are subdural hematomas over both cerebral convexities.", dict(laterality="Bilateral", L_convexity_hematoma="Yes", R_convexity_hematoma="Yes")),
 # ------------------------------------------------------------ size words
 ("size", "There is a tiny left subdural hematoma.", dict(L_description="Small")),
@@ -364,7 +364,7 @@ CASES = [
 ("infarct", "Left subdural hematoma. Chronic infarct. No infarct elsewhere.", dict(unspecified__infarct="Yes Chronic")),
 ("acuity", "Mixed density right subdural convexity fluid collection measuring 8 mm suggestive of an acute hematohygroma although acute on subacute subdural hematoma can have a similar appearance.", dict(R_acuity="Acute on Subacute")),
 ("density", "Mixed density right subdural hematoma. There is separation of hypo and hyperdense contents.", dict(R_hyperdense="Yes", R_hypodense="Yes")),
-("not sdh", "Previously, a large hematoma was seen within the inferior right frontal lobe. New mild right convexity subdural hematoma measuring 6 mm.", dict(R_description="NR", R_frontal_lobe="NR", R_thickness_mm=6.0)),
+("not sdh", "Previously, a large hematoma was seen within the inferior right frontal lobe. New mild right convexity subdural hematoma measuring 6 mm.", dict(R_description="Small", R_frontal_lobe="NR", R_thickness_mm=6.0)),  # v1.3: mild SDH = small
 ("thickness", "Left convexity subdural hematoma. Maximum SDH width subjacent to the anterior left parietal bone is 7.6 mm.", dict(L_thickness_mm=7.6)),
 ("other bleeds", "Left subdural hematoma. There are subarachnoid hemorrhagic changes in the sylvian fissures.", dict(subarachnoid_hemorrhage="Yes")),
 ("uncertain", "Left subdural hematoma. A punctate focus of subarachnoid versus intraparenchymal hemorrhage over the left parietal lobe.", dict(subarachnoid_hemorrhage="Yes", parenchymal_hemorrhage="Yes")),
@@ -455,4 +455,35 @@ CASES = [
 # 21 subcutaneous swelling is soft tissue, not edema
 ("v1.3", "Right SDH. There is mild right frontoparietal subcutaneous swelling and small scalp hematoma.", dict(parenchymal_edema="NR", soft_tissue_lesion="Yes", scalp_hematoma="Yes")),
 ("v1.3", "Right SDH. Diffuse cerebral swelling.", dict(parenchymal_edema="Yes")),
+# 22 acuity only from the age given to the hematoma; age words on parts = density
+("v1.3", "Large left mixed density subdural hematoma with acute blood components.", dict(L_acuity="NR", L_hyperdense="Yes", L_mixed_density="Yes")),
+("v1.3", "Mixed density (predominantly hypodense/chronic) right subdural hematoma.", dict(R_acuity="NR", R_hypodense="Yes", R_density_dominance="Hypodense")),
+("v1.3", "Predominantly acute left subdural hematoma.", dict(L_acuity="NR", L_hyperdense="Yes", L_density_dominance="Hyperdense")),
+("v1.3", "Right subdural hematoma with a small acute and a larger subacute/chronic component.", dict(R_acuity="NR", R_hyperdense="Yes", R_isodense="Yes", R_hypodense="Yes", R_density_dominance="Hypo/Isodense")),
+("v1.3", "Left subdural hematoma. It is mostly isodense. This heterogeneity could be from a very acute hemorrhage.", dict(L_acuity="NR", L_hyperdense="Yes")),
+("v1.3", "Subacute to chronic right subdural hematoma. A trace of more acute blood is seen within the collection.", dict(R_acuity="Subacute on chronic", R_hyperdense="Yes")),
+("v1.3", "Chronic right subdural hematoma with a small acute component.", dict(R_acuity="Chronic", R_hyperdense="Yes")),
+("v1.3", "Bilateral acute and chronic subdural hematomas.", dict(L_acuity="Acute on chronic", R_acuity="Acute on chronic")),
+("v1.3", "Mixed-age right subdural hematoma.", dict(R_acuity="NR", R_mixed_density="Yes")),
+("v1.3", "Mixed density left subdural hematoma. IMPRESSION: Acute on chronic left subdural hematoma.", dict(L_acuity="Acute on chronic")),
+("v1.3", "Acute left subdural hematoma. It is mostly low density.", dict(L_acuity="Acute", L_density_dominance="Hypodense")),
+("v1.3", "Low density left collection with layering hyperdense blood, suggestive of acute/subacute on chronic subdural hematoma.", dict(L_acuity="Acute on chronic")),
+("v1.3", "No acute areas of infarction. Chronic left subdural hematoma.", dict(L_acuity="Chronic", unspecified__infarct="No Acute")),
+# 23 review of the first development disagreements
+("v1.3", "Chronic bilateral subdural hematomas. There is no acute hyperdense blood seen in either subdural collection.", dict(L_acuity="Chronic", R_acuity="Chronic", L_hyperdense="No", R_hyperdense="No")),
+("v1.3", "Scattered right greater than left frontoparietal acute subarachnoid hemorrhage. Small left subdural hematoma.", dict(L_acuity="NR", subarachnoid_hemorrhage="Yes")),
+("v1.3", "No significant change in the right subdural collection. Hyperdensity in the right frontal lobe is new. This could represent acute hemorrhage.", dict(laterality="Right", R_acuity="NR", R_hyperdense="NR")),
+("v1.3", "Large right subdural hematoma. It is mostly low density with some areas of intermediate density.", dict(R_isodense="Yes", R_density_dominance="Hypodense")),
+("v1.3", "Left subdural hematoma with mixed densities. Hematoma is most hypodense with hyperdense areas.", dict(L_density_dominance="Hypodense", L_hyperdense="Yes")),
+("v1.3", "Mixed density right subdural hematoma. It is predominantly of low density.", dict(R_density_dominance="Hypodense")),
+("v1.3", "Right subdural hematoma with a small acute (high attenuation) component.", dict(R_hyperdense="Yes", R_acuity="NR")),
+("v1.3", "Moderate left subdural collection. A similar smaller collection is over the right hemisphere.", dict(L_description="Medium", R_description="NR")),
+("v1.3", "Mild right subdural hematoma along the convexity, measuring 6 mm.", dict(R_description="Small", R_thickness_mm=6.0)),
+("v1.3", "Right subdural hematoma along the frontal lobe with tracking hyperdense blood along the falx.", dict(R_hyperdense="NR", parafalcine_density="Hyperdense")),
+("v1.3", "Acute left subdural hematoma along the frontal lobe extending from the anterior falx to the posterior parietal level. It measures up to 1.7 cm in thickness.", dict(L_thickness_mm=17.0, L_parietal_lobe="Yes", parafalcine_hematoma="NR")),
+("v1.3", "Large right subdural hematoma. However, AP extension is virtually the entire cerebral hemisphere.", dict(**{"R_holohemispheric _ hematoma": "Yes"})),
+("v1.3", "Left subdural hematoma. This could represent layering blood within the ventricle.", dict(L_internal_appearence="NR")),
+("v1.3", "Hyperdense extradural collection over the left hemisphere, felt to be subdural in location as it crosses sutures.", dict(laterality="Left", L_hyperdense="Yes", epidural_hemorrhage="NR")),
+("v1.3", "Large left subdural hematoma extending along the falx. There is a small component extending into the right frontal region as well.", dict(laterality="Bilateral", L_description="Large", R_description="Small", parafalcine_hematoma="Left")),
+("v1.3", "Large left subdural hematoma extending along the falx.", dict(L_description="Large", parafalcine_description="NR", parafalcine_hematoma="Left")),
 ]
