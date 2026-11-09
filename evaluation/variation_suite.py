@@ -486,4 +486,9 @@ CASES = [
 ("v1.3", "Hyperdense extradural collection over the left hemisphere, felt to be subdural in location as it crosses sutures.", dict(laterality="Left", L_hyperdense="Yes", epidural_hemorrhage="NR")),
 ("v1.3", "Large left subdural hematoma extending along the falx. There is a small component extending into the right frontal region as well.", dict(laterality="Bilateral", L_description="Large", R_description="Small", parafalcine_hematoma="Left")),
 ("v1.3", "Large left subdural hematoma extending along the falx.", dict(L_description="Large", parafalcine_description="NR", parafalcine_hematoma="Left")),
+# 37 "is completely / severely effaced" = Severe; trapped ventricle = prominence
+("v1.3", "Large left subdural hematoma. The left lateral ventricle is completely effaced.", dict(effacement_lateral_ventricle="Severe", l_ventricle_laterality="Left")),
+("v1.3", "Large left subdural hematoma. The left lateral ventricle is moderately effaced.", dict(effacement_lateral_ventricle="Moderate")),
+("v1.3", "Large left SDH. Complete effacement of the left lateral ventricle frontal horn and partial effacement of the left temporal horn. There is trapping of the right lateral ventricle.", dict(effacement_lateral_ventricle="Severe", l_ventricle_laterality="Left", l_ventricular_prominence="Yes NS", l_v_prominence_laterality="Right", hydrocephalus="NR")),
+("v1.3", "Large left subdural hematoma with a trapped right lateral ventricle.", dict(laterality="Left", R_description="NR", l_ventricular_prominence="Yes NS", l_v_prominence_laterality="Right")),
 ]
