@@ -113,8 +113,8 @@ side_vars <- function(s) {
     v(paste0(s, "_frontal_lobe "), g, YN, "Frontal"),
     v(paste0(s, "_parietal_lobe "), g, YN, "Parietal"),
     v(paste0(s, "_temporal_lobe "), g, YN, "Temporal"),
-    v(paste0(s, "_occipital_lobe "), g, YN, "Occipital"),
-    v(paste0(s, "_middle_fossa "), g, YN, "Middle fossa")
+    v(paste0(s, "_occipital_lobe "), g, YN, "Occipital")
+    # middle fossa dropped from the study (v1.3)
   )
 }
 

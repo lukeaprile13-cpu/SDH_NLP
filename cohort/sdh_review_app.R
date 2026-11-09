@@ -59,6 +59,15 @@ ID1 <- names(items)[1]
 ID2 <- names(items)[2]
 items$key <- paste(items[[ID1]], items[[ID2]], items$variable, sep = "|")
 
+# which kind of disagreement: the NLP's errors are mostly where the NLP has
+# NR or a different value; where the human has NR it is mostly a human miss
+is_nr <- function(x) toupper(trimws(x)) %in% c("", "NR", "NA", "NAN", "NONE")
+items$kind <- ifelse(is_nr(items$nlp), "NLP has NR",
+                     ifelse(is_nr(items$human), "Human has NR", "Different values"))
+KINDS <- c("NLP has NR (check first)" = "NLP has NR",
+           "Different values" = "Different values",
+           "Human has NR (mostly human misses)" = "Human has NR")
+
 # whole report text, by the two report numbers
 reports <- tryCatch({
   ex <- read_chr(find_file(EXTRACTION_NAME))
@@ -134,6 +143,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(width = 3,
       selectInput("var_filter", "Variable", choices = NULL),
+      checkboxGroupInput("kinds", "Kind of disagreement", choices = KINDS, selected = KINDS),
       radioButtons("show", "Show", c("Not reviewed yet", "All", "Reviewed"), selected = "Not reviewed yet"),
       htmlOutput("progress"),
       hr(),
@@ -196,6 +206,7 @@ server <- function(input, output, session) {
     req(input$var_filter)
     x <- items
     if (input$var_filter != "(all)") x <- x[x$variable == input$var_filter, , drop = FALSE]
+    x <- x[x$kind %in% input$kinds, , drop = FALSE]
     done <- x$key %in% review()$key
     if (input$show == "Not reviewed yet") x <- x[!done, , drop = FALSE]
     if (input$show == "Reviewed") x <- x[done, , drop = FALSE]
@@ -203,7 +214,7 @@ server <- function(input, output, session) {
   })
 
   # back to the first one when the filter changes
-  observeEvent(list(input$var_filter, input$show), pos(1), ignoreInit = TRUE)
+  observeEvent(list(input$var_filter, input$show, input$kinds), pos(1), ignoreInit = TRUE)
 
   current <- reactive({
     x <- shown()
@@ -242,6 +253,7 @@ server <- function(input, output, session) {
         tags$td(HTML(paste0("Report <b>", esc(it[[ID1]]), "</b>"))),
         tags$td(HTML(paste0("Human: <b>", esc(it$human), "</b>"))),
         tags$td(HTML(paste0("NLP: <b>", esc(it$nlp), "</b>"))),
+        tags$td(em(it$kind)),
         tags$td(span(class = if (done) "done" else "todo", if (done) "reviewed" else "not reviewed"))
       ))
     )

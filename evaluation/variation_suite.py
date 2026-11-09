@@ -34,7 +34,7 @@ CASES = [
 ("acuity", "There is a chronic left subdural hematoma.", dict(L_acuity="Chronic")),
 ("acuity", "There is an acute on chronic left subdural hematoma.", dict(L_acuity="Acute on chronic")),
 ("acuity", "There is an acute-on-chronic left subdural hematoma.", dict(L_acuity="Acute on chronic")),
-("acuity", "There is a left subdural hematoma with acute and chronic components.", dict(L_acuity="Acute on chronic")),
+("acuity", "There is a left subdural hematoma with acute and chronic components.", dict(L_acuity="NR", L_hyperdense="Yes", L_hypodense="Yes")),  # v1.3: ages of parts = density
 ("acuity", "There is a subacute on chronic left subdural hematoma.", dict(L_acuity="Subacute on chronic")),
 ("acuity", "There is a subacute-to-chronic left subdural hematoma.", dict(L_acuity="Subacute on chronic")),
 ("acuity", "There is an acute to subacute left subdural hematoma.", dict(L_acuity="Acute on Subacute")),
@@ -43,7 +43,7 @@ CASES = [
 ("acuity", "Left acute SDH.", dict(laterality="Left", L_acuity="Acute")),
 ("acuity", "Left cSDH.", dict(laterality="Left", L_acuity="Chronic")),
 ("acuity", "Left aSDH.", dict(laterality="Left", L_acuity="Acute")),
-("acuity", "There is a left subdural hematoma with an acute component.", dict(L_acuity="Acute on chronic", L_mixed_density="NR", L_hyperdense="NR")),
+("acuity", "There is a left subdural hematoma with an acute component.", dict(L_acuity="NR", L_mixed_density="NR", L_hyperdense="Yes")),  # v1.3
 # ------------------------------------------------------------ density
 ("density", "There is a hyperdense left subdural hematoma.", dict(L_hyperdense="Yes")),
 ("density", "There is a hyperattenuating left subdural hematoma.", dict(L_hyperdense="Yes")),
@@ -114,7 +114,7 @@ CASES = [
 ("location", "Subdural hematoma along the left frontal convexity.", dict(L_convexity_hematoma="Yes", L_frontal_lobe="Yes")),
 ("location", "Subdural hematoma along the vertex on the left.", dict(L_vertex="Yes")),
 ("location", "Left subdural hematoma extending to the vertex.", dict(L_vertex="Yes")),
-("location", "Left subdural hematoma extending into the middle cranial fossa.", dict(L_middle_fossa="Yes")),
+# middle fossa dropped from the study in v1.3
 ("location", "Left subdural hematoma extending along the falx.", dict(parafalcine_hematoma="Left")),
 ("location", "Left subdural hematoma extending along the tentorium.", dict(tentorium_hematoma="Left")),
 ("location", "There is a small parafalcine subdural hematoma.", dict(parafalcine_hematoma="Yes NS", parafalcine_description="Small")),
@@ -269,11 +269,11 @@ CASES = [
 ("density", "There is a hyperechoic left subdural collection.", dict(L_hyperdense="Yes")),
 ("effacement", "Left subdural hematoma which is responsible for severe mass effect with compression of the left cerebral hemisphere, left lateral ventricle, subfalcine and early transtentorial herniation.", dict(effacement_sulci="NR", mass_effect_present="Severe", herniation_transtentorial="Mild")),
 ("other bleeds", "Left subdural hematoma. No intraaxial hemorrhage.", dict(parenchymal_hemorrhage="No", intraventricular_hemorrhage="No", subarachnoid_hemorrhage="NR")),
-("density", "Stable size of predominantly acute holohemispheric subdural hematoma along the left cerebral convexity.", dict(L_acuity="Acute", L_hyperdense="NR", L_density_dominance="NR")),
+("density", "Stable size of predominantly acute holohemispheric subdural hematoma along the left cerebral convexity.", dict(L_acuity="NR", L_hyperdense="Yes", L_density_dominance="Hyperdense")),  # v1.3
 ("pathology", "Left subdural hematoma. No recent large artery territory ischemic cortical infarct.", {"territorial_ infarct": "No Acute", "unspecified__infarct": "NR"}),
 ("pathology", "Left subdural hematoma. Chronic right PICA territory infarct is again noted. No recent territorial infarct.", {"territorial_ infarct": "Yes Chronic, No Acute"}),
 ("pathology", "There are old basal ganglia lacunar infarcts and scattered areas of hypodensity in cerebral white matter, likely due to chronic ischemic change from small vessel disease.", dict(lacune_infarct="Yes Chronic", unspecified__infarct="NR", microangiopathy="Yes NS")),
-("size", "Bilateral chronic extra-axial collections larger on the left with possible small acute superimposed components causing 3 mm midline shift to the right.", dict(L_description="NR", L_acuity="Acute on chronic", L_mixed_density="NR")),
+("size", "Bilateral chronic extra-axial collections larger on the left with possible small acute superimposed components causing 3 mm midline shift to the right.", dict(L_description="NR", L_acuity="Chronic", L_hyperdense="Yes", L_mixed_density="NR")),  # v1.3
 ("effacement", "Left subdural hematoma. Sulci and cisternal spaces are appropriate for age.", dict(effacement_sulci="No")),
 ("pathology", "Left subdural hematoma. Background of moderate atrophy and microangiopathic disease.", dict(cerebral_atrophy="Moderate", microangiopathy="Moderate")),
 ("pathology", "Left subdural hematoma. Moderate atrophy and mild microangiopathic changes.", dict(cerebral_atrophy="Moderate", microangiopathy="Mild")),
@@ -368,8 +368,8 @@ CASES = [
 ("thickness", "Left convexity subdural hematoma. Maximum SDH width subjacent to the anterior left parietal bone is 7.6 mm.", dict(L_thickness_mm=7.6)),
 ("other bleeds", "Left subdural hematoma. There are subarachnoid hemorrhagic changes in the sylvian fissures.", dict(subarachnoid_hemorrhage="Yes")),
 ("uncertain", "Left subdural hematoma. A punctate focus of subarachnoid versus intraparenchymal hemorrhage over the left parietal lobe.", dict(subarachnoid_hemorrhage="Yes", parenchymal_hemorrhage="Yes")),
-("acuity", "Left subdural hematoma along the left frontal convexity measuring up to 0.8 cm. Hyperdensity in keeping with ongoing acute component.", dict(L_acuity="Acute on chronic", L_mixed_density="NR", L_hyperdense="Yes")),
-("acuity", "Left subdural hematoma. There is a small acute component along the posterior margin.", dict(L_acuity="Acute on chronic", L_mixed_density="NR", L_description="NR")),
+("acuity", "Left subdural hematoma along the left frontal convexity measuring up to 0.8 cm. Hyperdensity in keeping with ongoing acute component.", dict(L_acuity="NR", L_mixed_density="NR", L_hyperdense="Yes")),  # v1.3
+("acuity", "Left subdural hematoma. There is a small acute component along the posterior margin.", dict(L_acuity="NR", L_hyperdense="Yes", L_mixed_density="NR", L_description="NR")),  # v1.3
 ("acuity", "Left subdural hematoma. No acute component.", dict(L_acuity="NR", L_mixed_density="NR")),
 ("mass effect", "Left subdural hematoma. There is distortion and right-sided displacement of both lateral ventricles.", dict(effacement_lateral_ventricle="Yes NS", l_ventricle_laterality="Bilateral")),
 ("sinus", "Left subdural hematoma. Fluid noted in the right sphenoid sinus which may be due to inflammatory sinus disease.", dict(sphenoid_sinus="Fluid", paranal_sinuses="NR")),
@@ -378,7 +378,7 @@ CASES = [
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the right tentorium and the falx.", dict(parafalcine_hematoma="Yes NS", tentorium_hematoma="Right")),
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the falx and right tentorium.", dict(parafalcine_description="Small", tentorium_description="Small", tentorium_hematoma="Right")),
 ("falx", "There is a small amount of subdural hemorrhage along the falx.", dict(laterality="Falx", parafalcine_description="Small")),
-("acuity", "There is a left subdural collection. There is acute hemorrhage within some lower density extra-axial fluid suggesting acute on chronic.", dict(L_acuity="Acute on chronic", L_hyperdense="NR", L_hypodense="Yes", L_mixed_density="NR")),
+("acuity", "There is a left subdural collection. There is acute hemorrhage within some lower density extra-axial fluid suggesting acute on chronic.", dict(L_acuity="Acute on chronic", L_hyperdense="Yes", L_hypodense="Yes", L_mixed_density="NR")),  # v1.3
 ("falx", "Small subdural hematoma along the mid falx.", dict(parafalcine_location="Medial")),
 ("falx", "Small subdural hematoma along the anterior and mid falx.", dict(parafalcine_location="Anterior/medial")),
 ("falx", "Small subdural hematoma along the middle third of the falx and posteriorly.", dict(parafalcine_location="Medial/posterior")),
