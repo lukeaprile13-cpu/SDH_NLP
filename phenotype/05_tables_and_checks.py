@@ -1,10 +1,10 @@
 """
-STEP 4 - One analysis dataset, plus shareable descriptive tables.
+STEP 5 - Shareable descriptive tables (and one merged file for convenience).
 
-    python phenotype/04_tables_and_checks.py
+    python phenotype/05_tables_and_checks.py
 
-Patient level:  patient_level/analysis_dataset.parquet (one row per patient;
-                NLP output is added later, joined on row_id)
+Patient level:  patient_level/analysis_dataset.csv = cohort_key + baseline +
+                outcomes joined on row_id (one row per patient)
 Aggregate (cell-suppressed, safe to share outside GEMINI):
     table1_by_stratum.csv      descriptives: overall, traumatic, non-traumatic
     table2_by_pathway.csv      the same by treatment pathway
@@ -20,11 +20,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdh_config as cfg
 import sdh_io as io
 
-co = io.read_patient_level("cohort.parquet")
-base = io.read_patient_level("baseline_features.parquet").drop(columns="row_id")
-path = io.read_patient_level("pathways_outcomes.parquet").drop(columns="row_id")
-df = co.merge(base, on="patient_id_hashed", how="left").merge(path, on="patient_id_hashed", how="left")
-io.save_patient_level(df, "analysis_dataset.parquet")
+co = io.read_patient_level("cohort_key.csv")
+base = io.read_patient_level("baseline.csv").drop(columns="patient_id_hashed")
+path = io.read_patient_level("outcomes.csv").drop(columns="patient_id_hashed")
+df = co[["row_id", "patient_id_hashed", "sdh_type", "time_zero"]].merge(base, on="row_id", how="left") \
+    .merge(path, on="row_id", how="left")
+for c in df.columns:      # CSV round trip: turn "True"/"False" text back into booleans
+    if df[c].dtype == object and df[c].dropna().isin(["True", "False"]).all() and df[c].notna().any():
+        df[c] = df[c].map({"True": True, "False": False})
+io.save_patient_level(df, "analysis_dataset.csv")
 
 SKIP = ("row_id", "episode", "patient_id_hashed", "genc", "date_time", "time_zero", "index_ct_name",
         "hospitals_in_episode", "hospital_num", "surgery_hospital", "first_surgery_code", "sdh_ip_dx_types",
@@ -72,14 +76,14 @@ def describe(d, groups):
     return pd.DataFrame(rows)
 
 
-strata = {"overall": df, "traumatic": df[df.stratum == "traumatic"],
-          "nontraumatic": df[df.stratum == "nontraumatic"]}
+strata = {"overall": df, "traumatic": df[df.sdh_type == "traumatic"],
+          "nontraumatic": df[df.sdh_type == "nontraumatic"]}
 io.save_aggregate(describe(df, strata), "table1_by_stratum.csv")
 paths = {"overall": df, **{p: df[df.pathway == p] for p in sorted(df.pathway.dropna().unique())}}
 io.save_aggregate(describe(df, paths), "table2_by_pathway.csv")
 
 KEY = ["ctas", "mlaps_24h", "gcs", "sbp", "heart_rate", "inr", "platelets", "hemoglobin", "creatinine",
-       "sodium", "glucose", "nbhd_sc21_material_resources_q_DA21", "hours_triage_to_admission"]
+       "sodium", "glucose", "nbhd_sc21_material_resources_q_DA21"]
 KEY = [k for k in KEY if k in df]
 for by, name in (("hospital_num", "coverage_by_hospital.csv"), ("admission_year", "coverage_by_year.csv")):
     g = df.groupby(by)

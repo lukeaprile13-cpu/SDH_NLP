@@ -194,6 +194,33 @@ VITALS = {
     "gcs": (r"glasgow|\bgcs\b", r"eye|verbal|motor", 3, 15),
 }
 
+# GEMINI's standard concepts (lookup_lab_concept / lookup_vitals_concept
+# descriptions) are matched first; LABS / VITALS above are the fallback for
+# rows without a concept. name: (include, exclude) on the lower-case description
+LAB_CONCEPTS = {
+    "inr": (r"\binr\b|international normali", r""),
+    "pt": (r"prothrombin time", r"inr|ratio|international"),
+    "ptt": (r"aptt|partial thromboplastin", r"ratio"),
+    "platelets": (r"^platelets?\b", r"mean|aggreg|antibod|function|distribution|large|immature"),
+    "hemoglobin": (r"^h(a)?emoglobin \[mass/volume\]", r"a1c|plasma|urine|carboxy|met|fetal|fraction"),
+    "wbc": (r"^leukocytes \[#/volume\]", r"urine|fluid|csf"),
+    "sodium": (r"^sodium", r"urine|fluid"),
+    "creatinine": (r"^creatinine \[", r"urine|clearance|ratio|fluid"),
+    "glucose": (r"^glucose", r"urine|csf|fluid|tolerance|post|challenge"),
+    "fibrinogen": (r"fibrinogen", r"degradation|antigen"),
+    "lactate": (r"^lactate", r"dehydrog|csf"),
+}
+LABS["pt"] = (r"\bpt\b|prothrombin time", r"inr|ratio|ptt", 5, 150)
+VITAL_CONCEPTS = {
+    "sbp": r"^systolic blood pressure",
+    "dbp": r"^diastolic blood pressure",
+    "bp_combined": r"^blood pressure$|^blood pressure panel",   # '150/90' -> sbp and dbp
+    "heart_rate": r"^heart rate",
+    "resp_rate": r"^respiratory rate",
+    "spo2": r"^oxygen saturation",
+    "temperature": r"^body temperature",
+}
+
 # ---------------------------------------------------------------------
 # Medications and blood products (matched on drug / product name)
 # ---------------------------------------------------------------------
