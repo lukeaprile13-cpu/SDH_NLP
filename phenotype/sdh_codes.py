@@ -147,25 +147,24 @@ COMPLAINT_KEYWORDS = {
 PALLIATIVE_CODES = ["Z515"]
 
 # ---------------------------------------------------------------------
-# Interventions (CCI). VERIFY every group with check_intervention_codes.csv
+# Interventions (CCI). The extraction's sdh_surgery_codes.csv gives
+# burr_hole / craniotomy / twist_drill / embolization; these add families it
+# leaves out. VERIFY every group with check_intervention_codes.csv.
 # ---------------------------------------------------------------------
-# Matched by prefix on the code without dots (1AA52SE...). These are the
-# CCI rubrics most SDH operations are coded under; the check table lists
-# every code in the 1.AA / 1.AN / 1.AJ / 1.EA / 1.JW / 1.JX families seen
-# in the cohort, with counts, so the groups can be corrected.
-INTERVENTION_GROUPS = {
-    "sdh_drainage": ["1AA52"],        # drainage of meninges/dura (burr hole, twist drill, craniotomy)
-    "sdh_excision": ["1AA87"],        # excision of meninges/dura (membranes, hematoma)
-    "brain_drainage": ["1AN52"],      # drainage of brain (intracerebral hematoma)
-    "brain_excision": ["1AN87"],
-    "craniectomy_cranioplasty": ["1EA80", "1EA87", "1EA53"],   # VERIFY
-    "ventricular_drain": ["1AJ52"],   # EVD; VERIFY
-    "mma_embolization": ["1JW51", "1JX51", "1JE51"],          # VERIFY (approach/agent suffix)
+NOT_SDH_SURGERY = {"1AA52MESJ"}      # subdural-peritoneal shunt, not a craniotomy
+EXTRA_INTERVENTION_GROUPS = {
+    "membrane_excision": ["1AA87"],          # excision, meninges / dura (membranectomy)
+    "brain_hematoma_drainage": ["1AN52"],    # drainage, brain (intracerebral hematoma)
+    "decompressive_craniectomy": ["1EA80", "1EA87"],   # VERIFY
+    "other_meningeal_drainage": ["1AA52"],   # 1AA52 codes not in the extraction's list
+    "ventricular_drain": ["1AJ52"],          # EVD; VERIFY
     "mechanical_ventilation": ["1GZ31"],
 }
-CRANIAL_SURGERY_GROUPS = ["sdh_drainage", "sdh_excision", "brain_drainage", "brain_excision",
-                          "craniectomy_cranioplasty"]
+CRANIAL_SURGERY_GROUPS = ["burr_hole", "craniotomy", "twist_drill", "membrane_excision",
+                          "brain_hematoma_drainage", "decompressive_craniectomy", "other_meningeal_drainage"]
 INTERVENTION_CHECK_FAMILIES = ["1AA", "1AN", "1AJ", "1EA", "1JW", "1JX", "1JE"]
+# an embolization in an episode with one of these is probably aneurysm treatment
+ANEURYSM_CODES = ["I60", "I671", "Q282", "Q283"]
 
 # ---------------------------------------------------------------------
 # Labs and vitals (matched on the raw test / measurement name, lower case)
@@ -222,29 +221,27 @@ BLOOD_PRODUCTS = {
 }
 
 # ---------------------------------------------------------------------
-# Discharge disposition. VERIFY with check_discharge_disposition.csv
+# Discharge disposition: mapped from lookup_cihi_codes descriptions
+# (checked in check_discharge_disposition.csv)
 # ---------------------------------------------------------------------
-# DAD changed its codes in 2018-19 (2-digit "old" vs new); both are mapped.
-DISPOSITION_MAP = {
-    # old codes
-    "01": "transfer_acute", "1": "transfer_acute",
-    "02": "long_term_care", "2": "long_term_care",
-    "03": "other_facility", "3": "other_facility",
-    "04": "home_with_support", "4": "home_with_support",
-    "05": "home", "5": "home",
-    "06": "left_against_advice", "6": "left_against_advice",
-    "07": "died", "7": "died",
-    "08": "died", "8": "died",
-    "12": "left_against_advice",
-    # new codes (2018-19 onwards)
-    "10": "transfer_acute", "20": "transfer_acute",
-    "30": "long_term_care", "40": "other_facility",
-    "50": "home_with_support", "60": "home", "61": "home",
-    "62": "left_against_advice", "65": "left_against_advice",
-    "66": "died", "67": "died", "72": "died", "73": "died", "74": "died",
-    "90": "other_facility",
-}
 FAVOURABLE_DISPOSITIONS = {"home", "home_with_support"}
+_DISPOSITION_RULES = [   # first match wins (lower-case description)
+    ("died", r"died|death|expired|deceased|maid|medical assistance in dying|suicide|cadaver"),
+    ("left_against_advice", r"against|did not return|left|absent|elop"),
+    ("home_with_support", r"home.*support|support.*home|home care|homecare"),
+    ("home", r"home|residence|private"),
+    ("rehabilitation", r"rehab"),
+    ("long_term_care", r"long.?term|residential|nursing|continuing|chronic|group|supportive living"),
+    ("transfer_acute", r"acute|inpatient|emergency|ambulatory|hospital"),
+    ("other_facility", r"."),
+]
+
+
+def disposition_category(description):
+    d = str(description or "").lower()
+    if not d:
+        return None
+    return next(cat for cat, pattern in _DISPOSITION_RULES if re.search(pattern, d))
 
 
 def charlson_score(flags):

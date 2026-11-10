@@ -1,16 +1,17 @@
 """
 STEP 3 - What happened after arrival: treatment pathway and outcomes.
 
-These are never clustering inputs. Surgery timing is measured from time
-zero, so later analyses can handle immortal time (landmark or
-clone-censor-weight); palliative care is its own flag so a "no surgery"
-group is not mostly patients whose care was withdrawn.
+Never clustering inputs. Surgery is taken from the whole episode (after a
+transfer the operation is usually at the receiving hospital) and timed from
+time zero, so later analyses can deal with immortal time. Palliative care
+is its own flag, so "no surgery" is not mostly patients whose care was
+withdrawn.
 
     python phenotype/03_pathways_outcomes.py
 
-Writes output/patient_level/pathways_outcomes.csv and
+Writes patient_level/pathways_outcomes.parquet and aggregate/
 check_intervention_codes.csv, check_discharge_disposition.csv,
-check_neurosurgical_hospitals.csv in output/aggregate/.
+check_surgery_hospitals.csv.
 """
 import sys
 from pathlib import Path
@@ -21,207 +22,166 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdh_codes as codes
 import sdh_config as cfg
-import sdh_db as db
+import sdh_io as io
 
-conn = db.connect()
-sc = db.Schema(conn)
-
-cohort = db.read_patient_level("cohort.csv")
-enc = db.read_patient_level("encounters.csv")
-for c in ("time_zero", "admission_date_time", "discharge_date_time"):
-    cohort[c] = db.to_dt(cohort[c])
-for c in ("admission_date_time", "discharge_date_time"):
-    enc[c] = db.to_dt(enc[c])
-enc["in_index_episode"] = enc["in_index_episode"].astype(str).str.lower().eq("true")
-enc["sdh_coded"] = enc["sdh_codes"].notna()
-
-c = cohort.set_index("patient_id_hashed")
-t0, ep_end = c["time_zero"], c["discharge_date_time"]
-out = cohort[["row_id", "patient_id_hashed"]].set_index("patient_id_hashed")
-
-idx_enc = enc[enc.in_index_episode & enc.patient_id_hashed.isin(out.index)].copy()
-# admissions after the index episode, up to RECURRENCE_DAYS after its discharge
-later = enc[~enc.in_index_episode & enc.patient_id_hashed.isin(out.index)].copy()
-later["ep_end"] = later.patient_id_hashed.map(ep_end)
-later["days_after"] = (later.admission_date_time - later.ep_end).dt.total_seconds() / 86400
-later = later[(later.days_after >= 0) & (later.days_after <= cfg.RECURRENCE_DAYS)]
-gid_to_pid = pd.concat([idx_enc, later])[["genc_id", "patient_id_hashed"]].set_index("genc_id")["patient_id_hashed"]
+co = io.read_patient_level("cohort.parquet").set_index("patient_id_hashed")
+ep = io.read_patient_level("episode_encounters.parquet")
+t0, ep_end = co.time_zero, co.discharge_date_time
+gid_pid = ep.set_index("genc_id").patient_id_hashed
+out = co[["row_id"]].copy()
 
 # ---------------------------------------------------------------------
-# 1. Interventions (CCI)
+# 1. Interventions of the episode
 # ---------------------------------------------------------------------
-def interventions(table):
-    c_code = sc.col(table, [r"^intervention_code$", r"intervention_code", r"code"], required=True)
-    c_dt = sc.col(table, [r"start.*date_time", r"intervention.*date_time"])
-    c_date = sc.col(table, [r"start_date$", r"episode_start_date", r"date$"])
-    c_time = sc.col(table, [r"start_time$", r"episode_start_time", r"time$"])
-    sel = ["genc_id", f"{c_code} AS code"]
-    sel += [f"{c_dt} AS dt"] if c_dt else [f"{c_date} AS d"] + ([f"{c_time}::text AS tm"] if c_time else [])
-    x = db.query_ids(conn, f"SELECT {', '.join(sel)} FROM {table} WHERE genc_id = ANY(%(ids)s)", gid_to_pid.index)
-    if c_dt:
-        x["when"] = db.to_dt(x.dt)
-        x["time_known"] = x["when"].notna() & (x["when"].dt.strftime("%H%M") != "0000")
-    elif c_date:
-        x["when"], x["time_known"] = db.combine_date_time(x.d, x.tm if c_time else None)
-    else:
-        x["when"], x["time_known"] = pd.NaT, False
-    return x[["genc_id", "code", "when", "time_known"]]
+cols = ["genc_id", "intervention_code", "intervention_episode_start_date_time"]
+iv = pd.concat([io.load("ipintervention", cols), io.load("erintervention", cols)], ignore_index=True)
+iv = iv[iv.genc_id.isin(ep.genc_id)].copy()
+iv["code"] = iv.intervention_code.map(codes.normalise_code)
+iv["when"] = io.to_dt(iv.intervention_episode_start_date_time)
+iv["time_known"] = iv["when"].notna() & (iv["when"].dt.strftime("%H:%M") != "00:00")
+iv["patient_id_hashed"] = iv.genc_id.map(gid_pid)
+iv["h"] = io.hours_between(iv["when"], iv.patient_id_hashed.map(t0))
 
-
-tables = [sc.table("ipintervention")] + sc.find_tables(r"^erintervention")
-iv = pd.concat([interventions(t) for t in tables if t], ignore_index=True)
-iv["code"] = iv.code.map(codes.normalise_code)
-iv["patient_id_hashed"] = iv.genc_id.map(gid_to_pid)
-iv["in_index"] = iv.genc_id.isin(idx_enc.genc_id)
-iv["h"] = db.hours_between(iv["when"], iv.patient_id_hashed.map(t0))
-iv["group"] = None
-for g, prefixes in codes.INTERVENTION_GROUPS.items():
+# the extraction's reviewed list first, then the extra families for review
+sdh_list = pd.read_csv(cfg.DATA_DIR / "sdh_surgery_codes.csv", dtype=str)
+sdh_type = dict(zip(sdh_list.code.map(codes.normalise_code), sdh_list.sdh_surgery_type))
+sdh_type = {c: t for c, t in sdh_type.items() if c not in codes.NOT_SDH_SURGERY}
+iv["group"] = iv.code.map(sdh_type)
+for g, prefixes in codes.EXTRA_INTERVENTION_GROUPS.items():
     iv.loc[iv.group.isna() & iv.code.str.startswith(tuple(prefixes)), "group"] = g
-iv["cranial_surgery"] = iv.group.isin(codes.CRANIAL_SURGERY_GROUPS)
 
-chk = iv[iv["in_index"] & iv.code.str.startswith(tuple(codes.INTERVENTION_CHECK_FAMILIES))]
-db.save_aggregate(chk.groupby(["code", "group"], dropna=False).agg(
-    patients=("patient_id_hashed", "nunique"), with_time=("time_known", "sum")).reset_index()
-    .sort_values("patients", ascending=False), "check_intervention_codes.csv", ["patients", "with_time"])
+# embolization with an aneurysm / non-traumatic SAH code in the episode is
+# most likely aneurysm treatment, not middle meningeal artery embolization
+dx = io.load("ipdiagnosis", ["genc_id", "diagnosis_code", "diagnosis_type"])
+dx = dx[dx.genc_id.isin(ep.genc_id)].copy()
+dx["code"] = dx.diagnosis_code.map(codes.normalise_code)
+dx["patient_id_hashed"] = dx.genc_id.map(gid_pid)
+aneurysm = set(dx[dx.code.str.startswith(tuple(codes.ANEURYSM_CODES))].patient_id_hashed)
+emb = iv.group.eq("embolization")
+iv.loc[emb & iv.patient_id_hashed.isin(aneurysm), "group"] = "embolization_probable_aneurysm"
+iv.loc[emb & ~iv.patient_id_hashed.isin(aneurysm), "group"] = "mma_embolization"
 
-ix = iv[iv["in_index"]].sort_values("when")
-cran = ix[ix.cranial_surgery]
+fam = iv[iv.code.str.startswith(tuple(codes.INTERVENTION_CHECK_FAMILIES)) | iv.group.notna()]
+lk = io.load("lookup_cci", ["intervention_code", "cci_short_title"])
+lk["code"] = lk.intervention_code.map(codes.normalise_code)
+io.save_aggregate(fam.groupby(["code", "group"], dropna=False)
+                  .agg(patients=("patient_id_hashed", "nunique"), rows=("code", "size"),
+                       with_time=("time_known", "sum")).reset_index()
+                  .merge(lk[["code", "cci_short_title"]].drop_duplicates("code"), on="code", how="left")
+                  .sort_values("patients", ascending=False),
+                  "check_intervention_codes.csv", ["patients", "rows", "with_time"])
+
+iv = iv.sort_values("when")
+cran = iv[iv.group.isin(codes.CRANIAL_SURGERY_GROUPS)]
 first = cran.groupby("patient_id_hashed").first()
 out["cranial_surgery"] = out.index.isin(first.index)
-out["first_surgery_group"] = first.group.reindex(out.index)
-out["first_surgery_code"] = first.code.reindex(out.index)
-out["surgery_hours_from_t0"] = first.h.reindex(out.index).round(1)
-out["surgery_time_known"] = first.time_known.reindex(out.index)
-out["surgery_calendar_day"] = (first["when"].dt.normalize() -
-                               t0.reindex(first.index).dt.normalize()).dt.days.reindex(out.index)
-out["n_cranial_procedure_dates"] = cran.groupby("patient_id_hashed")["when"].apply(
+out["first_surgery_type"] = first.group
+out["first_surgery_code"] = first.code
+out["surgery_hours_from_t0"] = first.h.round(1)
+out["surgery_time_known"] = first.time_known
+out["surgery_calendar_day"] = (first["when"].dt.normalize() - t0.reindex(first.index).dt.normalize()).dt.days
+out["surgery_hospital"] = first.genc_id.map(ep.set_index("genc_id").hospital_num).astype("string")
+out["n_cranial_procedure_dates"] = cran.groupby("patient_id_hashed")["when"].agg(
     lambda s: s.dt.normalize().nunique()).reindex(out.index).fillna(0).astype(int)
-for g in ("mma_embolization", "ventricular_drain", "mechanical_ventilation"):
-    hit = ix[ix.group == g].groupby("patient_id_hashed").h.min()
+out["repeat_cranial_surgery_in_episode"] = out.n_cranial_procedure_dates > 1
+for g in ("mma_embolization", "embolization_probable_aneurysm", "ventricular_drain", "mechanical_ventilation",
+          "decompressive_craniectomy"):
+    hit = iv[iv.group == g].groupby("patient_id_hashed").h.min()
     out[g] = out.index.isin(hit.index)
-    out[f"{g}_hours_from_t0"] = hit.reindex(out.index).round(1)
-out["surgery_hospital"] = cran.groupby("patient_id_hashed").genc_id.first() \
-    .map(idx_enc.set_index("genc_id").hospital_num).reindex(out.index)
-
-# repeat surgery: a second operation date in the episode, or an operation
-# on a readmission within RECURRENCE_DAYS
-re_op = iv[~iv["in_index"] & iv.cranial_surgery].patient_id_hashed.unique()
-out["repeat_cranial_surgery_90d"] = (out.n_cranial_procedure_dates > 1) | out.index.isin(re_op)
+    out[f"{g}_hours_from_t0"] = hit.round(1)
 
 # ---------------------------------------------------------------------
-# 2. Palliative care, ICU
+# 2. Palliative care, ICU, neurosurgery consult
 # ---------------------------------------------------------------------
-DX = sc.table("ipdiagnosis")
-dx = db.query_ids(conn, f"SELECT genc_id, diagnosis_code FROM {DX} WHERE genc_id = ANY(%(ids)s)",
-                  idx_enc.genc_id)
-dx["code"] = dx.diagnosis_code.map(codes.normalise_code)
-pall = dx[dx.code.str.startswith(tuple(codes.PALLIATIVE_CODES))].genc_id.map(gid_to_pid).unique()
-out["palliative_care_coded"] = out.index.isin(pall)
+out["palliative_care_coded"] = out.index.isin(dx[dx.code.str.startswith(tuple(codes.PALLIATIVE_CODES))].patient_id_hashed)
 
-SCU = sc.table("ipscu", required=False)
-if SCU:
-    c_in = sc.col(SCU, [r"^scu_admit_date_time$", r"admit.*date.*time", r"date_time"])
-    if c_in:
-        scu = db.query_ids(conn, f"SELECT genc_id, {c_in} AS t FROM {SCU} WHERE genc_id = ANY(%(ids)s)",
-                           idx_enc.genc_id)
-        scu["patient_id_hashed"] = scu.genc_id.map(gid_to_pid)
-        scu["h"] = db.hours_between(db.to_dt(scu.t), scu.patient_id_hashed.map(t0))
-        first_icu = scu.groupby("patient_id_hashed").h.min()
-        out["icu_hours_from_t0"] = first_icu.reindex(out.index).round(1)
-        out["icu_within_24h"] = out.icu_hours_from_t0 < 24
+scu = io.load("ipscu", ["genc_id", "scu_admit_date_time", "icu_flag"])
+scu = scu[scu.genc_id.isin(ep.genc_id)].copy()
+scu = scu[io.truthy(scu.icu_flag)] if "icu_flag" in scu else scu
+scu["patient_id_hashed"] = scu.genc_id.map(gid_pid)
+scu["h"] = io.hours_between(io.to_dt(scu.scu_admit_date_time), scu.patient_id_hashed.map(t0))
+icu = scu.groupby("patient_id_hashed").h.min()
+out["icu_admission"] = out.index.isin(icu.index)
+out["icu_hours_from_t0"] = icu.round(1)
+out["icu_within_24h"] = out.icu_hours_from_t0 < 24
+
+cons = io.load("erconsults", ["genc_id", "consult_service_description", "consult_request_date_time"])
+cons = cons[cons.genc_id.isin(ep.genc_id) &
+            cons.consult_service_description.fillna("").str.lower().str.contains("neuro.?surg|neurosx|nsx")].copy()
+cons["patient_id_hashed"] = cons.genc_id.map(gid_pid)
+cons["h"] = io.hours_between(io.to_dt(cons.consult_request_date_time), cons.patient_id_hashed.map(t0))
+nc = cons.groupby("patient_id_hashed").h.min()
+out["er_neurosurgery_consult"] = out.index.isin(nc.index)
+out["neurosurgery_consult_hours_from_t0"] = nc.round(1)
 
 # ---------------------------------------------------------------------
 # 3. Pathway
 # ---------------------------------------------------------------------
 early = out.surgery_hours_from_t0 < cfg.EARLY_SURGERY_H
-pathway = np.select(
+out["pathway"] = np.select(
     [out.cranial_surgery & early, out.cranial_surgery, out.mma_embolization, out.palliative_care_coded],
-    ["surgery_early", "surgery_delayed", "mma_only", "no_surgery_palliative"], default="no_surgery")
-out["pathway"] = pathway
+    ["surgery_early", "surgery_delayed", "mma_embolization_only", "no_surgery_palliative"], default="no_surgery")
 
 # ---------------------------------------------------------------------
 # 4. Outcomes
 # ---------------------------------------------------------------------
-DV = sc.table("derived_variables")
-c_mort = sc.col(DV, [r"^in_hospital_mortality_derived$", r"mortality"])
-c_icu = sc.col(DV, [r"^icu_entry_derived$", r"icu_entry"])
-sel = ["genc_id"] + [f"{col} AS {a}" for col, a in [(c_mort, "died"), (c_icu, "icu_entry")] if col]
-dv = db.query_ids(conn, f"SELECT {', '.join(sel)} FROM {DV} WHERE genc_id = ANY(%(ids)s)", gid_to_pid.index)
-truthy = lambda s: s.astype("string").str.lower().isin(["true", "t", "1", "yes", "y"])
-for col in ("died", "icu_entry"):
-    if col in dv:
-        dv[col] = truthy(dv[col])
-dv["patient_id_hashed"] = dv.genc_id.map(gid_to_pid)
-dv["in_index"] = dv.genc_id.isin(idx_enc.genc_id)
-dvi = dv[dv["in_index"]]
-out["died_in_hospital"] = out.index.isin(dvi[dvi.died].patient_id_hashed) if "died" in dvi else np.nan
-if "icu_entry" in dvi:
-    out["icu_entry"] = out.index.isin(dvi[dvi.icu_entry].patient_id_hashed)
+e = io.load("encounters", ["genc_id", "discharge_disposition", "dv_in_hospital_mortality_derived",
+                           "dv_readmission_30d_derived", "discharge_ts"])
+e = e[e.genc_id.isin(ep.genc_id)].merge(ep[["genc_id", "patient_id_hashed", "order_in_episode"]], on="genc_id")
+e["died"] = io.truthy(e.dv_in_hospital_mortality_derived)
+last = e.sort_values("order_in_episode").groupby("patient_id_hashed").last()
 
-out["episode_los_days"] = ((ep_end - t0).dt.total_seconds() / 86400).reindex(out.index).round(2)
-out["days_to_death"] = out.episode_los_days.where(out.died_in_hospital == True)
-out["survivor_los_days"] = out.episode_los_days.where(out.died_in_hospital == False)
-out["alive_in_hospital_at_24h"] = (out.episode_los_days >= 1)
+out["died_in_hospital"] = out.index.isin(e[e.died].patient_id_hashed)
+out["episode_los_days"] = ((ep_end - t0).dt.total_seconds() / 86400).round(2)
+out["days_to_death"] = out.episode_los_days.where(out.died_in_hospital)
+out["survivor_los_days"] = out.episode_los_days.where(~out.died_in_hospital)
+out["died_within_48h"] = out.died_in_hospital & (out.episode_los_days < 2)
 
-# discharge disposition of the last admission of the episode
-last = idx_enc.sort_values("admission_date_time").groupby("patient_id_hashed").last()
-raw = last.get("discharge_disposition", pd.Series(dtype="string")).astype("string").str.strip()
-mapped = raw.map(codes.DISPOSITION_MAP)
-mapped = mapped.where(raw.notna())
-db.save_aggregate(pd.DataFrame({"raw_code": raw, "mapped": mapped.fillna("UNMAPPED")})
-                  .groupby(["raw_code", "mapped"], dropna=False).size().reset_index(name="patients"),
+# discharge disposition of the last encounter, mapped from CIHI's descriptions
+lk = io.load("lookup_cihi_codes")
+lk = lk[lk.column_name.astype(str).str.lower().eq("discharge_disposition")]
+desc = dict(zip(lk.value.astype(str).str.strip(), lk.description))
+raw = last.discharge_disposition.astype("string").str.strip()
+cat = raw.map(lambda v: codes.disposition_category(desc.get(v, desc.get(str(v).lstrip("0"), ""))))
+io.save_aggregate(pd.DataFrame({"raw_code": raw, "description": raw.map(desc), "category": cat})
+                  .groupby(["raw_code", "description", "category"], dropna=False).size().reset_index(name="patients"),
                   "check_discharge_disposition.csv", ["patients"])
-out["discharge_disposition_raw"] = raw.reindex(out.index)
-out["discharge_category"] = mapped.reindex(out.index)
-out.loc[out.died_in_hospital == True, "discharge_category"] = "died"
-out["favourable_discharge"] = out.discharge_category.isin(codes.FAVOURABLE_DISPOSITIONS) \
-    .where(out.discharge_category.notna())
-out["discharged_to_new_facility"] = out.discharge_category.isin(["long_term_care", "other_facility"])
+out["discharge_disposition_raw"] = raw
+out["discharge_category"] = cat.where(~out.died_in_hospital.reindex(cat.index), "died")
+out["favourable_discharge"] = out.discharge_category.isin(codes.FAVOURABLE_DISPOSITIONS)
+out["discharged_to_new_facility"] = out.discharge_category.isin(["long_term_care", "rehabilitation", "other_facility"])
 
-# readmissions (GEMINI hospitals only)
-surv = out.index[out.died_in_hospital == False]
-r30 = later[later.days_after <= cfg.FOLLOW_UP_DAYS]
-survivor = pd.Series(out.index.isin(surv), index=out.index)
-# among survivors of the index episode only (blank for those who died)
-out["readmitted_30d"] = pd.Series(out.index.isin(r30.patient_id_hashed), index=out.index) \
-    .astype("boolean").where(survivor)
-sdh_r = later[later.sdh_coded]
-out["sdh_readmission_90d"] = pd.Series(out.index.isin(sdh_r.patient_id_hashed), index=out.index) \
-    .astype("boolean").where(survivor)
-died_later = dv[~dv["in_index"] & dv.get("died", False)].patient_id_hashed.unique() if "died" in dv else []
-out["died_on_readmission_90d"] = out.index.isin(died_later)
+# readmission (GEMINI-derived: any GEMINI hospital) among survivors; SDH
+# readmission from the patient's later cohort encounters
+surv = ~out.died_in_hospital
+out["readmitted_30d"] = io.truthy(last.dv_readmission_30d_derived).reindex(out.index).astype("boolean").where(surv)
+allc = io.load("cohort", ["genc_id", "patient_id_hashed", "admission_date_time"])
+allc = allc[allc.patient_id_hashed.isin(out.index) & ~allc.genc_id.isin(ep.genc_id)].copy()
+allc["days"] = (io.to_dt(allc.admission_date_time) - allc.patient_id_hashed.map(ep_end)).dt.total_seconds() / 86400
+re_sdh = allc[allc.days.between(0, cfg.RECURRENCE_DAYS)].patient_id_hashed
+out["sdh_readmission_90d"] = pd.Series(out.index.isin(re_sdh), index=out.index).astype("boolean").where(surv)
 
-# hospital-free days to day 30 (0 if died in the index episode)
-window_end = t0 + pd.Timedelta(days=cfg.FOLLOW_UP_DAYS)
-days_in = ((ep_end.clip(upper=window_end) - t0).dt.total_seconds() / 86400).clip(lower=0)
-r = later.copy()
-r["t0"], r["wend"] = r.patient_id_hashed.map(t0), r.patient_id_hashed.map(window_end)
-r = r[r.admission_date_time < r.wend]
-r["d"] = ((r.discharge_date_time.clip(upper=r.wend) - r.admission_date_time).dt.total_seconds() / 86400).clip(lower=0)
-days_in = days_in.add(r.groupby("patient_id_hashed").d.sum(), fill_value=0)
-hfd = (cfg.FOLLOW_UP_DAYS - days_in).clip(lower=0).reindex(out.index)
-died_30 = (out.died_in_hospital == True) | out.index.isin(
-    later[(later.days_after <= cfg.FOLLOW_UP_DAYS) & later.genc_id.isin(dv[dv.get("died", False)].genc_id)]
-    .patient_id_hashed) if "died" in dv else (out.died_in_hospital == True)
-out["hospital_free_days_30"] = hfd.where(~died_30, 0).round(1)
+# days alive and out of hospital to day 30 (readmission days are not in the
+# extraction, so survivors are counted from the index episode only)
+out["days_alive_out_of_hospital_30"] = (cfg.FOLLOW_UP_DAYS - out.episode_los_days.clip(upper=cfg.FOLLOW_UP_DAYS)) \
+    .where(~out.died_in_hospital, 0).round(1)
 
 # ---------------------------------------------------------------------
-# 5. Hospital neurosurgical capability (data-driven)
+# 5. Where patients were treated
 # ---------------------------------------------------------------------
 ops = out.groupby("surgery_hospital").size()
 neuro = set(ops[ops >= cfg.NEUROSURGICAL_MIN_OPERATIONS].index.astype(str))
-db.save_aggregate(ops.rename("cranial_operations").reset_index()
+io.save_aggregate(ops.rename("sdh_operations").reset_index()
                   .assign(neurosurgical_centre=lambda d: d.surgery_hospital.astype(str).isin(neuro)),
-                  "check_neurosurgical_hospitals.csv", ["cranial_operations"])
-first_hosp = c["hospital_num"].astype(str)
-hosps = c["hospitals_in_episode"].fillna("").astype(str).str.split("; ")
-out["arrived_at_neurosurgical_centre"] = first_hosp.isin(neuro).reindex(out.index)
+                  "check_surgery_hospitals.csv", ["sdh_operations"])
+hosps = co.hospitals_in_episode.fillna("").astype(str).str.split("; ")
+first_h = co.hospital_num.astype(str)
+out["arrived_at_neurosurgical_centre"] = first_h.isin(neuro)
 out["transferred_to_neurosurgical_centre"] = pd.Series(
-    [(f not in neuro) and any(h in neuro for h in hs) for f, hs in zip(first_hosp, hosps)],
-    index=c.index).reindex(out.index)
-print(f"Neurosurgical centres (>= {cfg.NEUROSURGICAL_MIN_OPERATIONS} operations): {len(neuro)}")
+    [(f not in neuro) and any(h in neuro for h in hs) for f, hs in zip(first_h, hosps)], index=co.index)
+print(f"Neurosurgical centres (>= {cfg.NEUROSURGICAL_MIN_OPERATIONS} SDH operations): {len(neuro)}")
 print("Pathway:", out.pathway.value_counts().to_dict())
 
 out = out.reset_index()
-db.save_patient_level(out, "pathways_outcomes.csv")
-print("Done. Next: python phenotype/04_data_checks.py")
+io.save_patient_level(out, "pathways_outcomes.parquet")
+print("Next: python phenotype/04_tables_and_checks.py")
