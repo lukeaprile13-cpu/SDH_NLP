@@ -50,14 +50,19 @@ Use the `sdh-gemini` environment from the GitLab repo. From this repo's root:
 
 ```bash
 python phenotype/01_episodes_and_ct_reports.py   # episodes, flags, every head CT report
-#   -> run NLP_v5.ipynb on patient_level/ct_reports_for_nlp.csv
-#      (OUTPUT_CSV = "ct_reports_nlp_results.csv", RUN_VALIDATION = False)
-#      and put the result in patient_level/
+python phenotype/nlp/run_nlp.py --workers 4      # NLP snapshot on every report (resumable)
 python phenotype/02_cohort_key.py                # confirm SDH, time zero, index episode
 python phenotype/03_baseline.py                  # baseline.csv
 python phenotype/04_outcomes.py                  # outcomes.csv
 python phenotype/05_tables_and_checks.py         # Table 1, coverage
+python phenotype/06_clustering_dataset.py        # final clustering dataset + missing-data report
 ```
+
+The NLP is a fixed snapshot (`nlp/NLP_v5_snapshot.ipynb`, see
+`nlp/SNAPSHOT.md`) so the preliminary datasets are reproducible while the
+NLP is still being validated. It needs `spacy` (`pip install spacy`).
+A CT shows an SDH when the NLP gives a laterality of Left / Right /
+Bilateral, or any falx (parafalcine) or tentorium hematoma.
 
 Steps 2-5 also run before the NLP (every CT then counts as showing the SDH,
 and `nlp_available` is False), so the pipeline can be checked first.
@@ -67,6 +72,29 @@ Output goes to `~/sdh_phenotype_output`:
 
 - `patient_level/`: one row per patient or report. **Stays on GEMINI. Never commit it.**
 - `aggregate/`: counts with cells under 6 suppressed. Safe to share.
+
+## Missing data: who is dropped, and where it is counted
+
+Nobody is dropped for a missing lab or vital. Patients only leave at step 6,
+by the rules in `CLUSTER_RULES` (each one a row of `clustering_flowchart.csv`).
+
+| File | Shows |
+|---|---|
+| `clustering_flowchart.csv` | Patients removed by each inclusion rule |
+| `clustering_missingness_by_variable.csv` | % missing for every clustering variable, overall and for patients who came in with the SDH vs in-hospital onset (CTAS / mLAPS are blank by design there); which variables are used |
+| `clustering_missingness_by_hospital.csv` | % missing per hospital (a site without lab data shows up here) |
+| `clustering_patient_missingness.csv` | Patients by share of clustering variables missing |
+| `check_lab_vital_timing.csv` | Values found but too early / late / implausible |
+
+A variable missing in more than `MAX_VARIABLE_MISSING_PCT` (40%) of patients
+is set aside, not used for clustering. Patients missing more than
+`MAX_PATIENT_MISSING_PCT` (50%) of the kept variables are flagged
+(`DROP_HIGH_MISSING_PATIENTS` removes them). The rest of the missing values
+are handled by the clustering method (latent class models with missing
+data, or multiple imputation), not by dropping patients.
+
+Yes/no code variables (comorbidities, symptoms, medications) are never
+"missing": no code means no.
 
 ## Check before analysis
 
@@ -89,7 +117,7 @@ patients are missing.
 
 ## Known limitations
 
-- The NLP was built on reports that contain an SDH. Its handling of reports
+- The NLP is a pre-validation snapshot, and it was built on reports that contain an SDH. Its handling of reports
   with **no** SDH (normal scans, "resolved") must be checked before it is used
   to confirm SDH.
 - Only GEMINI hospitals: deaths after discharge and readmissions elsewhere are not seen.

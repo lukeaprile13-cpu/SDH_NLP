@@ -22,8 +22,11 @@ SMALL_CELL = 6                               # counts 1-5 are shown as "<6"
 # The NLP results for ct_reports_for_nlp.csv (NLP_v5.ipynb's OUTPUT_CSV).
 # Until it exists, step 2 falls back to "first CT with a report".
 NLP_RESULTS_FILE = PATIENT_DIR / "ct_reports_nlp_results.csv"
-# NLP laterality values that mean an SDH is on the scan ("NR" = none reported)
-NLP_SDH_LATERALITY = {"Left", "Right", "Bilateral", "Falx"}
+# A CT shows an SDH when the NLP gives a laterality of Left / Right / Bilateral,
+# OR a falx (parafalcine) or tentorium hematoma (any value but NR / No).
+NLP_SDH_LATERALITY = {"Left", "Right", "Bilateral"}
+NLP_SDH_COMPARTMENTS = ["parafalcine_hematoma", "tentorium_hematoma"]
+NLP_ABSENT_VALUES = {"NR", "No", ""}
 
 # ---------------------------------------------------------------------
 # Cohort: everyone is kept and flagged; exclusions happen at analysis
@@ -65,3 +68,25 @@ EARLY_SURGERY_H = 24
 FOLLOW_UP_DAYS = 30
 RECURRENCE_DAYS = 90
 NEUROSURGICAL_MIN_OPERATIONS = 20            # hospitals with this many SDH operations
+
+# ---------------------------------------------------------------------
+# Step 6 - the clustering dataset
+# ---------------------------------------------------------------------
+# Inclusion rules, applied in this order (False = not applied); each one is
+# a row of clustering_flowchart.csv
+CLUSTER_RULES = {
+    "has_ct_report": True,            # the index episode has a head CT report to read
+    "sdh_confirmed_on_ct": True,      # the NLP found an SDH on a CT of the index episode
+    "in_study_period": True,          # admitted 2015-01-01 to 2024-06-30
+    "exclude_elective": False,        # planned admissions (no triage moment)
+    "exclude_er_only_sdh": False,     # SDH code only in the ER (kept: the CT confirms it)
+    "exclude_in_hospital_onset": False,
+}
+# Missing labs / vitals never remove a patient by default. Instead:
+#  - a clustering variable missing in more than this share of patients is
+#    set aside (listed in clustering_missingness_by_variable.csv, not used)
+MAX_VARIABLE_MISSING_PCT = 40
+#  - patients missing more than this share of the kept clustering variables
+#    are flagged; set DROP_HIGH_MISSING_PATIENTS = True to remove them
+MAX_PATIENT_MISSING_PCT = 50
+DROP_HIGH_MISSING_PATIENTS = False

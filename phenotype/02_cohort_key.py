@@ -39,9 +39,12 @@ nlp = None
 if cfg.NLP_RESULTS_FILE.exists():
     nlp = pd.read_csv(cfg.NLP_RESULTS_FILE, dtype=str)
     nlp = nlp.rename(columns={nlp.columns[0]: "report_id"})
-    lat = nlp.get("laterality", pd.Series("", index=nlp.index)).fillna("").str.strip()
-    tent = nlp.get("tentorium_hematoma", pd.Series("", index=nlp.index)).fillna("").str.strip().str.lower()
-    nlp["sdh_on_ct"] = lat.isin(cfg.NLP_SDH_LATERALITY) | tent.isin(["yes", "present", "true", "1"])
+    col = lambda c: nlp[c].fillna("").str.strip() if c in nlp else pd.Series("", index=nlp.index)
+    nlp["sdh_on_ct"] = col("laterality").isin(cfg.NLP_SDH_LATERALITY)
+    for c in cfg.NLP_SDH_COMPARTMENTS:
+        nlp["sdh_on_ct"] |= ~col(c).isin(cfg.NLP_ABSENT_VALUES)
+    if "error" in nlp:
+        print(f"  {(nlp.error.fillna('') != '').sum()} reports had an NLP error (counted as no SDH)")
     cti = cti.merge(nlp[["report_id", "sdh_on_ct"]], on="report_id", how="left")
     print(f"NLP results: {len(nlp)} reports, {int(nlp.sdh_on_ct.sum())} show an SDH")
     missing = cti.sdh_on_ct.isna().sum()
