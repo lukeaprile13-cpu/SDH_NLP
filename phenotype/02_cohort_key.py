@@ -45,6 +45,15 @@ if cfg.NLP_RESULTS_FILE.exists():
         nlp["sdh_on_ct"] |= ~col(c).isin(cfg.NLP_ABSENT_VALUES)
     if "error" in nlp:
         print(f"  {(nlp.error.fillna('') != '').sum()} reports had an NLP error (counted as no SDH)")
+    # the NLP results must come from these exact reports (step 1 renumbers them when rerun)
+    if "report_hash" not in nlp or "report_hash" not in cti:
+        sys.exit("The NLP results or ct_reports_index.csv have no report fingerprint (made with an older "
+                 "version): rerun notebook 01, delete ct_reports_nlp_results.csv and rerun the NLP.")
+    chk = cti[["report_id", "report_hash"]].merge(nlp[["report_id", "report_hash"]], on="report_id", how="inner")
+    bad = (chk.report_hash_x != chk.report_hash_y).sum()
+    if bad:
+        sys.exit(f"{bad} NLP results do not match the current reports (step 1 was rerun after the NLP). "
+                 "Delete ct_reports_nlp_results.csv and rerun the NLP.")
     cti = cti.merge(nlp[["report_id", "sdh_on_ct"]], on="report_id", how="left")
     print(f"NLP results: {len(nlp)} reports, {int(nlp.sdh_on_ct.sum())} show an SDH")
     missing = cti.sdh_on_ct.isna().sum()

@@ -30,6 +30,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import sdh_config as cfg
+from sdh_io import report_hash
 
 NOTEBOOK = HERE / "NLP_v5_snapshot.ipynb"
 _ns = {}
@@ -72,7 +73,7 @@ def run_one(text, ns=None):
 def run_chunk(rows):
     out = []
     for report_id, episode, text in rows:
-        row = {"report_id": report_id, "episode": episode}
+        row = {"report_id": report_id, "report_hash": report_hash(text), "episode": episode}
         try:
             row.update(run_one(text))
             row["error"] = ""
@@ -98,11 +99,20 @@ def main():
     if a.limit:
         reports = reports.head(a.limit)
     out_path, partial = Path(a.output), Path(a.output + ".partial")
+    # resume only reports whose id AND text fingerprint match (step 1 renumbers reports when rerun)
+    reports["report_hash"] = reports.report.map(report_hash)
+    key = reports.report_id + "|" + reports.report_hash
     done = set()
     if partial.exists():
-        done = set(pd.read_csv(partial, dtype=str, usecols=["report_id"]).report_id)
+        old = pd.read_csv(partial, dtype=str, keep_default_na=False)
+        if "report_hash" not in old:
+            old["report_hash"] = ""
+        done = set(old.report_id + "|" + old.report_hash) & set(key)
+        if len(done) < len(old):
+            print(f"{len(old) - len(done)} saved results belong to an older set of reports: they are redone")
+            old[(old.report_id + "|" + old.report_hash).isin(done)].to_csv(partial, index=False)
         print(f"Resuming: {len(done)} reports already done")
-    todo = reports[~reports.report_id.isin(done)]
+    todo = reports[~key.isin(done)]
     rows = list(zip(todo.report_id, todo.episode, todo.report))
     chunks = [rows[i:i + a.chunk] for i in range(0, len(rows), a.chunk)]
     print(f"{len(rows)} reports to run in {len(chunks)} chunks with {a.workers} workers")

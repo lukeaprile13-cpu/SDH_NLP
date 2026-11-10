@@ -160,12 +160,13 @@ ep = ep_i.reset_index()
 
 rep = ct[ct.has_report].copy()
 rep["report_id"] = ["CT%07d" % (i + 1) for i in range(len(rep))]
+rep["report_hash"] = rep.imaging_result.map(io.report_hash)
 rep["hours_from_episode_admission"] = io.hours_between(
     rep.performed_date_time, rep.episode.map(ep_i.admission_date_time)).round(1)
 # columns A and B = report numbers, column C = report text (what NLP_v5.ipynb reads)
 io.save_patient_level(rep[["report_id", "episode", "imaging_result"]].rename(columns={"imaging_result": "report"}),
                       "ct_reports_for_nlp.csv")
-io.save_patient_level(rep[["report_id", "episode", "genc_id", "performed_date_time", "test_name_raw",
+io.save_patient_level(rep[["report_id", "report_hash", "episode", "genc_id", "performed_date_time", "test_name_raw",
                            "hours_from_episode_admission"]], "ct_reports_index.csv")
 
 # ---------------------------------------------------------------------

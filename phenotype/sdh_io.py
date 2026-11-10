@@ -51,6 +51,13 @@ def load(name, columns=None, genc_ids=None, keep_rows=None):
     return pd.concat(parts, ignore_index=True)
 
 
+def report_hash(text):
+    """Fingerprint of a report's text (whitespace-insensitive), so NLP results
+    are only ever matched to the exact report they were made from."""
+    import hashlib
+    return hashlib.md5(" ".join(str(text).split()).encode("utf-8")).hexdigest()[:16]
+
+
 def to_dt(s):
     return pd.to_datetime(s, errors="coerce", format="mixed")
 
