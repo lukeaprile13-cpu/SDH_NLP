@@ -43,7 +43,7 @@ def load(name, columns=None, genc_ids=None, keep_rows=None):
         return df
     keep = set(map(str, genc_ids))
     parts = []
-    for batch in pq.ParquetFile(path).iter_batches(columns=columns, batch_size=1_000_000):
+    for batch in pq.ParquetFile(path).iter_batches(columns=columns, batch_size=500_000):
         b = batch.to_pandas()
         b["genc_id"] = b["genc_id"].astype("string")
         b = b[b.genc_id.isin(keep)]
@@ -59,7 +59,14 @@ def report_hash(text):
 
 
 def to_dt(s):
-    return pd.to_datetime(s, errors="coerce", format="mixed")
+    """Text or date-times -> date-times. Tries the fast single-format parse first and
+    falls back to per-value parsing only when that misses values."""
+    if pd.api.types.is_datetime64_any_dtype(s):
+        return s
+    fast = pd.to_datetime(s, errors="coerce")
+    if fast.isna().sum() > pd.Series(s).isna().sum():
+        return pd.to_datetime(s, errors="coerce", format="mixed")
+    return fast
 
 
 def hours_between(later, earlier):

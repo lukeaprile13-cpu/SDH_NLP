@@ -94,12 +94,24 @@ def closest(frame, var, window, lo, hi, check):
     ok = f.val.between(lo, hi)
     inwin = f.h.between(*window)
     k = f[present & ok & inwin].assign(a=lambda d: d.h.abs()).sort_values("a").groupby("patient_id_hashed").first()
-    check.append({"variable": var, "rows": int(present.sum()), "implausible": int((present & ~ok).sum()),
+    check.append({"variable": var, "rows_within_3_days": int(present.sum()), "implausible": int((present & ~ok).sum()),
                   "outside_window": int((present & ok & ~inwin).sum()), "patients_with_value": len(k),
                   "pct_patients": round(100 * len(k) / len(out), 1),
                   "median": round(k.val.median(), 2) if len(k) else None,
                   "median_hours_from_t0": round(k.h.median(), 1) if len(k) else None})
     return k
+
+
+# The lab and vitals tables are large (11 and 6 million rows): while reading,
+# keep only rows of interest measured near time zero (a wider window than the
+# baseline windows, so the checks can still count values measured too late).
+SCAN_WINDOW_H = (-48, 72)
+gid_t0 = encs.assign(t0=encs.patient_id_hashed.map(t0)).set_index("genc_id").t0
+
+
+def near_t0(b, time_col):
+    h = io.hours_between(io.to_dt(b[time_col]), b.genc_id.map(gid_t0))
+    return h.between(*SCAN_WINDOW_H)
 
 
 timing, names = [], []
@@ -115,8 +127,9 @@ def lab_text(b):
 
 lab = io.load("lab", ["genc_id", "test_name_raw", "test_type_mapped_omop", "result_value", "result_unit",
                       "collection_date_time"], genc_ids=encs.genc_id,
-              keep_rows=lambda b: lab_text(b)[0].fillna("").str.contains(inc_all, regex=True)
-              | lab_text(b)[1].str.contains(inc_all, regex=True))
+              keep_rows=lambda b: near_t0(b, "collection_date_time") & (
+                  lab_text(b)[0].fillna("").str.contains(inc_all, regex=True)
+                  | lab_text(b)[1].str.contains(inc_all, regex=True)))
 lab["concept"], lab["raw"] = lab_text(lab)
 lab["patient_id_hashed"] = lab.genc_id.map(gid_pid)
 lab["val"] = io.to_number(lab.result_value)
@@ -158,8 +171,9 @@ def vit_text(b):
 
 vit = io.load("vitals", ["genc_id", "measurement_name", "measurement_mapped_omop", "measurement_value",
                          "measurement_unit", "measure_date_time"], genc_ids=encs.genc_id,
-              keep_rows=lambda b: vit_text(b)[0].fillna("").str.contains(v_inc, regex=True)
-              | vit_text(b)[1].str.contains(v_inc, regex=True))
+              keep_rows=lambda b: near_t0(b, "measure_date_time") & (
+                  vit_text(b)[0].fillna("").str.contains(v_inc, regex=True)
+                  | vit_text(b)[1].str.contains(v_inc, regex=True)))
 vit["concept"], vit["raw"] = vit_text(vit)
 vit["patient_id_hashed"] = vit.genc_id.map(gid_pid)
 vit["t"] = vit.measure_date_time
@@ -193,7 +207,7 @@ nm = pd.concat(names, ignore_index=True)
 io.save_aggregate(nm[["table", "variable", "name", "unit", "rows", "median"]].sort_values(["variable", "rows"],
                   ascending=[True, False]), "check_lab_vital_names.csv", ["rows"])
 io.save_aggregate(pd.DataFrame(timing), "check_lab_vital_timing.csv",
-                  ["rows", "implausible", "outside_window", "patients_with_value"])
+                  ["rows_within_3_days", "implausible", "outside_window", "patients_with_value"])
 for v in ("inr", "platelets", "gcs"):
     if v not in out:
         out[v] = np.nan
