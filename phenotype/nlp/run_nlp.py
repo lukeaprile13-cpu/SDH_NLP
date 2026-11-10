@@ -15,14 +15,22 @@ per worker; each report then goes through the same calls as the notebook's
 run_csv: tokenize_report -> orchestrator -> master_variable_mapping_function
 -> final_output. Progress is saved every chunk, so a stopped run picks up
 where it left off when started again.
+
+If a worker process dies (usually out of memory), the unfinished reports
+are retried in smaller batches with one worker fewer each time; a report
+that crashes the NLP on its own, or runs longer than --timeout seconds, is
+recorded with an error instead of stopping the run.
 """
 import argparse
 import contextlib
 import io
 import json
+import signal
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor
+from collections import deque
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import pandas as pd
@@ -34,6 +42,15 @@ from sdh_io import report_hash
 
 NOTEBOOK = HERE / "NLP_v5_snapshot.ipynb"
 _ns = {}
+_timeout = 60
+
+
+class ReportTimeout(Exception):
+    pass
+
+
+def _alarm(signum, frame):
+    raise ReportTimeout()
 
 
 def load_nlp(notebook=NOTEBOOK):
@@ -56,9 +73,14 @@ def load_nlp(notebook=NOTEBOOK):
     return ns
 
 
-def _init(notebook):
-    global _ns
-    _ns = load_nlp(notebook)
+def _init(notebook, timeout):
+    global _ns, _timeout
+    # workers started by fork (Linux) inherit the NLP already loaded by main();
+    # loading it twice in one process makes spaCy refuse to re-register its components
+    if not _ns:
+        _ns = load_nlp(notebook)
+    _timeout = timeout
+    signal.signal(signal.SIGALRM, _alarm)
 
 
 def run_one(text, ns=None):
@@ -74,12 +96,18 @@ def run_chunk(rows):
     out = []
     for report_id, episode, text in rows:
         row = {"report_id": report_id, "report_hash": report_hash(text), "episode": episode}
+        signal.alarm(_timeout)
         try:
             row.update(run_one(text))
             row["error"] = ""
+        except ReportTimeout:
+            row.update(_ns["final_output"]({}))
+            row["error"] = f"timeout: still running after {_timeout} s"
         except Exception as error:          # this report gets NR everywhere, the error is kept
             row.update(_ns["final_output"]({}))
             row["error"] = f"{type(error).__name__}: {error}"
+        finally:
+            signal.alarm(0)
         out.append(row)
     return out
 
@@ -92,6 +120,7 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--chunk", type=int, default=500)
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--timeout", type=int, default=60, help="seconds before one report is given up")
     a = ap.parse_args()
 
     reports = pd.read_csv(a.input, dtype=str, keep_default_na=False)
@@ -117,14 +146,60 @@ def main():
     chunks = [rows[i:i + a.chunk] for i in range(0, len(rows), a.chunk)]
     print(f"{len(rows)} reports to run in {len(chunks)} chunks with {a.workers} workers")
 
-    start, n = time.time(), 0
-    with ProcessPoolExecutor(max_workers=a.workers, initializer=_init, initargs=(a.notebook,)) as pool:
-        for res in pool.map(run_chunk, chunks):
-            pd.DataFrame(res).to_csv(partial, mode="a", header=not partial.exists(), index=False)
-            n += len(res)
-            rate = n / max(time.time() - start, 1e-9)
-            print(f"  {n + len(done)}/{len(reports)} reports  ({rate:.0f}/s, "
-                  f"about {(len(rows) - n) / max(rate, 1e-9) / 60:.0f} min left)", flush=True)
+    # load the NLP once here first, so a setup problem (e.g. a missing package) stops
+    # the run with a clear message instead of looking like crashed workers
+    global _ns
+    try:
+        main_ns = _ns = load_nlp(a.notebook)
+    except Exception as error:
+        sys.exit(f"The NLP could not be loaded from {a.notebook}: {type(error).__name__}: {error}")
+
+    start, n, workers = time.time(), 0, max(1, a.workers)
+    queue = deque(chunks)
+
+    def write(res):
+        nonlocal n
+        pd.DataFrame(res).to_csv(partial, mode="a", header=not partial.exists(), index=False)
+        n += len(res)
+        rate = n / max(time.time() - start, 1e-9)
+        print(f"  {n + len(done)}/{len(reports)} reports  ({rate:.0f}/s, "
+              f"about {(len(rows) - n) / max(rate, 1e-9) / 60:.0f} min left)", flush=True)
+
+    while queue:
+        # with one worker, one batch at a time, so a crash points at that batch
+        in_flight = workers * 2 if workers > 1 else 1
+        pool = ProcessPoolExecutor(max_workers=workers, initializer=_init, initargs=(a.notebook, a.timeout))
+        running, lost = {}, []
+        while (queue or running) and not lost:
+            while queue and len(running) < in_flight:
+                c = queue.popleft()
+                running[pool.submit(run_chunk, c)] = c
+            finished, _ = wait(running, return_when=FIRST_COMPLETED)
+            for f in finished:
+                c = running.pop(f)
+                try:
+                    write(f.result())
+                except BrokenProcessPool:
+                    lost.append(c)
+        pool.shutdown(wait=False, cancel_futures=True)
+        if not lost:
+            continue
+        lost += list(running.values())
+        if workers == 1 and len(lost) == 1 and len(lost[0]) == 1:
+            # this one report crashes the NLP by itself: record it and move on
+            report_id, episode, text = lost[0][0]
+            print(f"  report {report_id} crashes the NLP: recorded as an error")
+            write([{"report_id": report_id, "report_hash": report_hash(text), "episode": episode,
+                    **main_ns["final_output"]({}), "error": "worker crashed on this report"}])
+            continue
+        n_lost = sum(len(c) for c in lost)
+        workers = max(1, workers - 1)
+        for c in reversed(lost):            # retry first, in halves
+            half = max(1, len(c) // 2)
+            for part in reversed([c[i:i + half] for i in range(0, len(c), half)]):
+                queue.appendleft(part)
+        print(f"  A worker stopped (usually out of memory, or one report crashed it). Retrying {n_lost} "
+              f"reports in smaller batches with {workers} worker(s).", flush=True)
 
     res = pd.read_csv(partial, dtype=str, keep_default_na=False).drop_duplicates("report_id", keep="last")
     res.to_csv(out_path, index=False)

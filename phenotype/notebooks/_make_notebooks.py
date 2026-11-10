@@ -206,7 +206,7 @@ test = nlp_summary(TEST_OUT)'''),
 will often be negative). If something looks off, stop here and send me the summary.
 """),
     md("## Full run"),
-    code("!{sys.executable} ../nlp/run_nlp.py --workers 4"),
+    code("!{sys.executable} ../nlp/run_nlp.py --workers 2"),
     code('''full = nlp_summary(cfg.NLP_RESULTS_FILE)
 for c in ["L_acuity", "R_acuity", "midline_shift_present", "mass_effect_present"]:
     if c in full:
