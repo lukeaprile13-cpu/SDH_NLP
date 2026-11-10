@@ -148,15 +148,19 @@ in-hospital onset and ER-only; the share with **no CT report** (about 28% expect
 """),
     code('show("check_transfer_linking.csv", note="how transfers were joined")'),
     md("**Look for:** most joins found by *both* epicare and the 12 h rule. Many 'epicare only' joins would mean the 12 h window is too short; many 'time gap only' that it is too long."),
+    code('show("check_arrival_source.csv", note="where patients came from (first encounter of the episode)")'),
+    md("**Look for:** `from_acute_care_derived` = True is the transfer flag. `institution_from_filled` is also set for long-term care / rehab, so it is not used for the flag."),
     code('''cov = show("check_ct_coverage_by_hospital_year.csv", note="episodes with a CT report, per hospital and year")
 if cov is not None:
     display(Markdown("**% of episodes with a CT report** (blank = small cell)"))
-    display(cov.pivot_table(index=["hospital_num", "hospital_type"], columns="year", values="pct_with_ct_report"))'''),
-    md("**Look for:** hospitals or years with low or no CT reports. Those patients would drop out of the NLP cohort, so check whether the missing reports are spread out or concentrated."),
+    display(cov.pivot_table(index=["hospital_num", "hospital_type"], columns="year", values="pct_with_ct_report"))
+show("check_data_coverage_tables.csv", note="which data types GEMINI's coverage table lists")
+show("check_ct_report_by_transfer.csv", note="CT report availability: transferred in vs not")'''),
+    md("**Look for:** hospitals or years with low or no CT reports. `radiology_not_collected` counts episodes where GEMINI did not collect radiology at that hospital and date (a data gap, not a missing scan). Patients transferred in often had their first CT at the sending hospital."),
     code('show("check_ct_names.csv", rows=40, note="CT names counted as head CTs (excluded_name = True were left out)")'),
     md("**Look for:** head CTs wrongly excluded, or non-head scans (CTA, spine) wrongly included."),
     md("## Share"),
-    code('share(["step1_counts.csv", "check_transfer_linking.csv", "check_ct_coverage_by_hospital_year.csv", "check_ct_names.csv"])'),
+    code('share(["step1_counts.csv", "check_transfer_linking.csv", "check_arrival_source.csv", "check_data_coverage_tables.csv", "check_ct_report_by_transfer.csv", "check_ct_coverage_by_hospital_year.csv", "check_ct_names.csv"], rows=400)'),
 ])
 
 # ---------------------------------------------------------------------

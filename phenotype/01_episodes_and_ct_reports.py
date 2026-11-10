@@ -15,8 +15,9 @@ Patient level (patient_level/, stays on GEMINI):
     ct_reports_for_nlp.csv     report_id, episode, report  -> run NLP_v5.ipynb on this
     ct_reports_index.csv       report_id, episode, genc_id, CT time and name (no text)
 Aggregate (aggregate/, cell-suppressed):
-    step1_counts.csv, check_transfer_linking.csv, check_ct_names.csv,
-    check_ct_coverage_by_hospital_year.csv
+    step1_counts.csv, check_transfer_linking.csv, check_arrival_source.csv, check_ct_names.csv,
+    check_ct_coverage_by_hospital_year.csv, check_ct_report_by_transfer.csv,
+    check_data_coverage_tables.csv
 """
 import sys
 from pathlib import Path
@@ -34,7 +35,7 @@ enc = io.load("cohort")
 enc = enc.merge(io.load("encounters", [
     "genc_id", "admission_ts", "discharge_ts", "er_triage_ts", "admit_category", "institution_from",
     "admit_via_ambulance", "gender", "hospital_hospital_type", "dv_epicare",
-    "dv_from_acute_care_institution_derived"]), on="genc_id", how="left")
+    "dv_from_acute_care_institution_derived", "transfer_institution_from_type_mns"]), on="genc_id", how="left")
 enc["admit"] = io.to_dt(enc.admission_ts).fillna(io.to_dt(enc.admission_date_time))
 enc["discharge"] = io.to_dt(enc.discharge_ts)
 enc["triage"] = io.to_dt(enc.er_triage_ts)
@@ -96,8 +97,17 @@ ep = pd.DataFrame({
 ep["flag_er_only_sdh"] = ~ep.any_inpatient_sdh_code
 ep["flag_in_hospital_onset"] = ep.any_inpatient_sdh_code & ~ep.any_sdh_present_on_arrival
 ep["flag_elective"] = ep.admit_category.astype("string").str.strip().isin(cfg.ELECTIVE_CATEGORIES)
-from_acute = io.truthy(row1.dv_from_acute_care_institution_derived).reindex(ep.episode).values
-ep["flag_transferred_in_from_outside_gemini"] = ep.institution_from.notna() | from_acute
+# arrived from an acute-care hospital (GEMINI-derived). institution_from alone
+# is also filled in for long-term care, rehab etc., so it is only reported.
+from_acute = io.truthy(row1.dv_from_acute_care_institution_derived).reindex(ep.episode)
+ep["flag_transferred_in_from_outside_gemini"] = from_acute.values
+blank = lambda s: s.astype("string").str.strip().fillna("").isin(["", "nan", "None", "0", "00", "000", "0000"])
+src = pd.DataFrame({
+    "institution_from_filled": (~blank(row1.institution_from)).reindex(ep.episode).values,
+    "from_acute_care_derived": from_acute.values,
+    "from_type_mns": row1.get("transfer_institution_from_type_mns", pd.Series(dtype="string"))
+                         .astype("string").reindex(ep.episode).fillna("(blank)").values})
+io.save_aggregate(src.value_counts().reset_index(name="episodes"), "check_arrival_source.csv", ["episodes"])
 ep["flag_in_study_period"] = (ep.admission_date_time >= cfg.STUDY_START) & (ep.admission_date_time < cfg.STUDY_END)
 ep["sdh_type"] = ep.sdh_traumatic.map({True: "traumatic", False: "nontraumatic"})
 ep = ep.sort_values(["patient_id_hashed", "admission_date_time"])
@@ -111,8 +121,10 @@ rad = io.load("radiology", ["genc_id", "modality_mapped", "body_part_mapped", "t
 gid_ep = enc.set_index("genc_id").episode
 rad = rad[rad.genc_id.isin(gid_ep.index) & rad.modality_mapped.eq("CT")].copy()
 name = rad.test_name_raw.fillna("").str.lower()
-rad["is_head"] = name.str.contains(cfg.CT_NAME_INCLUDE, regex=True)
-rad["excluded_name"] = name.str.contains(cfg.CT_NAME_EXCLUDE, regex=True)
+part = rad.body_part_mapped.fillna("").astype(str).str.lower()
+rad["is_head"] = name.str.contains(cfg.CT_NAME_INCLUDE, regex=True) | part.str.contains(cfg.CT_BODY_PART_INCLUDE, regex=True)
+rad["excluded_name"] = name.str.contains(cfg.CT_ALWAYS_EXCLUDE, regex=True) | (
+    name.str.contains(cfg.CT_VASCULAR, regex=True) & ~name.str.contains(cfg.CT_NONCONTRAST, regex=True))
 io.save_aggregate(rad[rad.is_head].groupby(["test_name_raw", "body_part_mapped", "excluded_name"], dropna=False)
                   .size().reset_index(name="scans").sort_values("scans", ascending=False),
                   "check_ct_names.csv", ["scans"])
@@ -126,6 +138,24 @@ ep_i = ep.set_index("episode")
 ep_i["n_head_cts"] = ct.groupby("episode").size().reindex(ep_i.index).fillna(0).astype(int)
 ep_i["n_head_ct_reports"] = ct.groupby("episode").has_report.sum().reindex(ep_i.index).fillna(0).astype(int)
 ep_i["flag_no_ct_report"] = ep_i.n_head_ct_reports == 0
+
+# was radiology collected at this hospital on this date? (GEMINI lookup_data_coverage)
+cov_lk = io.load("lookup_data_coverage")
+io.save_aggregate(cov_lk.groupby("data").hospital_num.nunique().reset_index(name="hospitals"),
+                  "check_data_coverage_tables.csv")
+rad_cov = cov_lk[cov_lk.data.astype(str).str.contains("radiol|imaging", case=False, regex=True)].copy()
+if len(rad_cov):
+    rad_cov["hospital_num"] = rad_cov.hospital_num.astype("string")
+    rad_cov["lo"], rad_cov["hi"] = io.to_dt(rad_cov.min_date), io.to_dt(rad_cov.max_date)
+    m = ep_i[["hospital_num", "admission_date_time"]].reset_index().merge(rad_cov[["hospital_num", "lo", "hi"]],
+                                                                          on="hospital_num", how="left")
+    m["in"] = (m.admission_date_time >= m.lo) & (m.admission_date_time <= m.hi + pd.Timedelta(days=1))
+    # an episode with a CT report clearly had radiology collected, whatever the table says
+    ep_i["flag_radiology_not_collected"] = ~m.groupby("episode")["in"].any().reindex(ep_i.index).fillna(False) \
+        & ep_i.flag_no_ct_report
+else:
+    print("lookup_data_coverage has no radiology rows; data values:", sorted(cov_lk.data.astype(str).unique()))
+    ep_i["flag_radiology_not_collected"] = False
 ep = ep_i.reset_index()
 
 rep = ct[ct.has_report].copy()
@@ -146,15 +176,20 @@ io.save_patient_level(enc[["episode", "patient_id_hashed", "genc_id", "order_in_
                            "discharge", "triage", "hours_since_previous_discharge"]], "episode_encounters.csv")
 
 cov = ep.assign(year=ep.admission_date_time.dt.year).groupby(["hospital_num", "hospital_type", "year"]).agg(
-    episodes=("episode", "size"), with_ct_report=("flag_no_ct_report", lambda s: int((~s).sum()))).reset_index()
+    episodes=("episode", "size"), with_ct_report=("flag_no_ct_report", lambda s: int((~s).sum())),
+    radiology_not_collected=("flag_radiology_not_collected", "sum")).reset_index()
 cov["pct_with_ct_report"] = [io.safe_pct(k, n) for k, n in zip(cov.with_ct_report, cov.episodes)]
-io.save_aggregate(cov, "check_ct_coverage_by_hospital_year.csv", ["episodes", "with_ct_report"])
+io.save_aggregate(cov, "check_ct_coverage_by_hospital_year.csv", ["episodes", "with_ct_report", "radiology_not_collected"])
+tr = ep.groupby("flag_transferred_in_from_outside_gemini").agg(
+    episodes=("episode", "size"), with_ct_report=("flag_no_ct_report", lambda s: int((~s).sum()))).reset_index()
+tr["pct_with_ct_report"] = [io.safe_pct(k, n) for k, n in zip(tr.with_ct_report, tr.episodes)]
+io.save_aggregate(tr, "check_ct_report_by_transfer.csv", ["episodes", "with_ct_report"])
 
 firsts = ep[ep.episode_number_for_patient == 1]
 rows = [("All encounters in the extraction", enc.patient_id_hashed.nunique(), len(enc))]
 rows.append(("Episodes of care (transfers joined)", ep.patient_id_hashed.nunique(), len(ep)))
 for f in ["flag_er_only_sdh", "flag_in_hospital_onset", "flag_elective", "flag_transferred_in_from_outside_gemini",
-          "flag_no_ct_report"]:
+          "flag_no_ct_report", "flag_radiology_not_collected"]:
     rows.append((f"  episodes flagged {f[5:]}", ep[ep[f]].patient_id_hashed.nunique(), int(ep[f].sum())))
 rows.append(("  episodes outside the study period", ep[~ep.flag_in_study_period].patient_id_hashed.nunique(),
              int((~ep.flag_in_study_period).sum())))

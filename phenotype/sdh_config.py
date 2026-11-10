@@ -46,9 +46,16 @@ TRANSFER_GAP_HOURS = 12
 TRIAGE_WINDOW_H = (-72, 1)
 
 # Head CTs (all with a report go to the NLP)
-CT_NAME_INCLUDE = r"head|brain"
-CT_NAME_EXCLUDE = (r"angio|\bcta\b|perfusion|venogra|spine|neck|facial|sinus|orbit|"
-                   r"temporal bone|stereotac|navigation")
+# A head CT: the name says head / brain / cranial, or the body part is mapped
+# to head. Combined scans (head + C-spine, head + face, trauma panels) are
+# KEPT: they include a full non-contrast head CT and are often the first scan
+# in major trauma. Purely vascular studies (CTA, venogram, perfusion) are left
+# out unless the name also has a non-contrast head part.
+CT_NAME_INCLUDE = r"head|brain|cranial"
+CT_BODY_PART_INCLUDE = r"head|brain"
+CT_VASCULAR = r"angio|\bcta\b|\bctv\b|venogra|perfusion|\bcow\b"
+CT_NONCONTRAST = r"unenhanced|\bwo\b|w/o|without|no contrast|non.?con|\bnc\b|- ?cont|-/|plain"
+CT_ALWAYS_EXCLUDE = r"brain death"
 # The index CT of a patient who came in with the SDH is looked for from this
 # long before the episode's first admission to this long after it
 CT_WINDOW_BEFORE_H = 48
@@ -75,6 +82,7 @@ NEUROSURGICAL_MIN_OPERATIONS = 20            # hospitals with this many SDH oper
 # Inclusion rules, applied in this order (False = not applied); each one is
 # a row of clustering_flowchart.csv
 CLUSTER_RULES = {
+    "radiology_collected": True,      # GEMINI collected radiology at that hospital on that date
     "has_ct_report": True,            # the index episode has a head CT report to read
     "sdh_confirmed_on_ct": True,      # the NLP found an SDH on a CT of the index episode
     "in_study_period": True,          # admitted 2015-01-01 to 2024-06-30

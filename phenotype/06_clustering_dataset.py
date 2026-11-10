@@ -37,6 +37,8 @@ key["flag_no_ct_report"] = pd.to_numeric(key.n_head_ct_reports, errors="coerce")
 # 1. Inclusion rules, one row per rule
 # ---------------------------------------------------------------------
 rules = {
+    "radiology_collected": ("Radiology collected at that hospital and date (data coverage)",
+                            lambda d: ~d.get("flag_radiology_not_collected", pd.Series(False, index=d.index))),
     "has_ct_report": ("Index episode has a head CT report", lambda d: ~d.flag_no_ct_report),
     "sdh_confirmed_on_ct": ("SDH confirmed on CT by the NLP", lambda d: d.confirmed),
     "in_study_period": (f"Admitted {cfg.STUDY_START} to before {cfg.STUDY_END}", lambda d: d.flag_in_study_period),
