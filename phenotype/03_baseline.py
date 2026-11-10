@@ -280,7 +280,7 @@ add("antiplatelet_evidence", out.rx_antiplatelet, "A", "antiplatelet ordered aro
 if cfg.NLP_RESULTS_FILE.exists():
     nlp = pd.read_csv(cfg.NLP_RESULTS_FILE, dtype=str)
     nlp = nlp.rename(columns={nlp.columns[0]: "report_id"})
-    drop = {"episode", "report", "tree", "review_flag", "error"}
+    drop = {"episode", "report", "report_hash", "tree", "review_flag", "error"}
     feats = [c for c in nlp.columns[1:] if c not in drop and not c.lower().endswith("_description")]
     m = pid[["index_ct_report_id"]].reset_index().merge(nlp[["report_id"] + feats], left_on="index_ct_report_id",
                                                         right_on="report_id", how="left").set_index("patient_id_hashed")
