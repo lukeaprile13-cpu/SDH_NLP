@@ -491,4 +491,9 @@ CASES = [
 ("v1.3", "Large left subdural hematoma. The left lateral ventricle is moderately effaced.", dict(effacement_lateral_ventricle="Moderate")),
 ("v1.3", "Large left SDH. Complete effacement of the left lateral ventricle frontal horn and partial effacement of the left temporal horn. There is trapping of the right lateral ventricle.", dict(effacement_lateral_ventricle="Severe", l_ventricle_laterality="Left", l_ventricular_prominence="Yes NS", l_v_prominence_laterality="Right", hydrocephalus="NR")),
 ("v1.3", "Large left subdural hematoma with a trapped right lateral ventricle.", dict(laterality="Left", R_description="NR", l_ventricular_prominence="Yes NS", l_v_prominence_laterality="Right")),
+# 39 central / descending / downward herniation = transtentorial; herniation of the tonsils = tonsillar
+("v1.3", "Large left subdural hematoma with central herniation.", dict(herniation_transtentorial="Yes NS", herniation_uncal="NR")),
+("v1.3", "Large left SDH with downward herniation.", dict(herniation_transtentorial="Yes NS")),
+("v1.3", "Large left SDH. No central herniation.", dict(herniation_transtentorial="No")),
+("v1.3", "Large left SDH. Downward herniation of the cerebellar tonsils.", dict(herniation_tonsillar="Yes NS", herniation_transtentorial="NR")),
 ]
