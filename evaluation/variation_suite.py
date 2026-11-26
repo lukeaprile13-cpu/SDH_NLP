@@ -507,4 +507,9 @@ CASES = [
 ("v1.3", "Multiple bilateral small subdural hemorrhages, falcotentorial subdural hemorrhage.", dict(L_description="Small", R_description="Small", parafalcine_description="NR", parafalcine_hematoma="Yes NS")),
 ("v1.3", "New left subdural hematoma.", dict(laterality="Left", L_acuity="NR")),
 ("v1.3", "New chronic left subdural hematoma.", dict(L_acuity="Chronic")),
+# 45 falx location only where the bleed is, not where it is thickest
+("v1.3", "Subdural hematoma along the falx and left frontal convexity. This is most pronounced along the anterior falx.", dict(parafalcine_hematoma="Yes NS", parafalcine_location="NR", laterality="Left")),
+("v1.3", "Subdural hematoma along the falx, thickest at the posterior falx.", dict(parafalcine_location="NR")),
+("v1.3", "Subdural hematoma along the falx, most pronounced anteriorly.", dict(parafalcine_location="NR")),
+("v1.3", "Subdural hematoma along the anterior falx.", dict(parafalcine_location="Anterior")),
 ]
