@@ -353,7 +353,7 @@ CASES = [
 ("negation", "Left subdural hematoma. No significant abnormality is seen within the bony structures, orbits and paranasal sinuses.", dict(bony_lesion="No", orbital_lesion="No", paranal_sinuses="Clear")),
 ("fracture", "Left subdural hematoma. Abnormal texture of the skull bones, likely related to renal osteodystrophy.", dict(bony_lesion="NR")),
 ("negation", "Left subdural hematoma. No new extra-axial hemorrhage.", dict(subarachnoid_hemorrhage="NR")),
-("falx", "There is an acute subdural hematoma along the falx measuring up to 8 mm.", dict(laterality="Falx", parafalcine_hematoma="Yes NS", parafalcine_acuity="Acute", parafalcine_thickness_mm=8.0)),
+("falx", "There is an acute subdural hematoma along the falx measuring up to 8 mm.", dict(laterality="NR", parafalcine_hematoma="Yes NS", parafalcine_acuity="Acute", parafalcine_thickness_mm=8.0)),
 ("falx", "There is an acute subdural hematoma on the left paramedian aspect of the high convexity measuring up to 8 mm thick.", dict(laterality="Left", parafalcine_hematoma="Left", parafalcine_thickness_mm=8.0)),
 ("falx", "Left convexity subdural hematoma with extension along the falx.", dict(laterality="Left")),
 ("infarct", "Left subdural hematoma. No hyperdense vessel sign to suggest acute cortical infarction. Stable chronic infarcts within the left occipital lobe.", dict(unspecified__infarct="Yes Chronic, No Acute")),
@@ -377,7 +377,7 @@ CASES = [
 ("thickness", "There is a hyperdense subdural hematoma over the left cerebral convexity and left tentorium. The component overlying the left cerebral convexity measures 11-mm and the tentorial component measures 15-mm.", dict(L_thickness_mm=11.0, tentorium_thickness_mm=15.0)),
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the right tentorium and the falx.", dict(parafalcine_hematoma="Yes NS", tentorium_hematoma="Right")),
 ("falx", "Left convexity subdural hematoma. There is also a small amount of subdural hemorrhage along the falx and right tentorium.", dict(parafalcine_description="Small", tentorium_description="Small", tentorium_hematoma="Right")),
-("falx", "There is a small amount of subdural hemorrhage along the falx.", dict(laterality="Falx", parafalcine_description="Small")),
+("falx", "There is a small amount of subdural hemorrhage along the falx.", dict(laterality="NR", parafalcine_description="Small")),
 ("acuity", "There is a left subdural collection. There is acute hemorrhage within some lower density extra-axial fluid suggesting acute on chronic.", dict(L_acuity="Acute on chronic", L_hyperdense="Yes", L_hypodense="Yes", L_mixed_density="NR")),  # v1.3
 ("falx", "Small subdural hematoma along the mid falx.", dict(parafalcine_location="Medial")),
 ("falx", "Small subdural hematoma along the anterior and mid falx.", dict(parafalcine_location="Anterior/medial")),
@@ -445,7 +445,7 @@ CASES = [
 ("v1.3", "Left SDH. Mild supratentorial midline shift to the right.", dict(midline_shift_present="Mild", midline_shift_direction="Right")),
 # 16 "high convexity" read as the falx keeps the side
 ("v1.3", "Acute subdural hematoma along the left high convexity.", dict(parafalcine_hematoma="Left", laterality="Left", parafalcine_acuity="Acute")),
-("v1.3", "Acute subdural hematoma along the high convexity.", dict(parafalcine_hematoma="Yes NS", laterality="Falx")),
+("v1.3", "Acute subdural hematoma along the high convexity.", dict(parafalcine_hematoma="Yes NS", laterality="NR")),
 # 19 / 20 falx location from measurements; extensions take the SDH's age; "near vertex" is the falx's
 ("v1.3", "Acute right SDH, 7 mm. The hemorrhage extends along the right interhemispheric fissure with maximum thickness of 6 mm anteriorly and near vertex, and 5 mm posteriorly. Further extension of the hemorrhage along the right tentorium cerebelli is evident.", dict(parafalcine_hematoma="Right", parafalcine_location="Anterior/posterior", parafalcine_thickness_mm="6", parafalcine_acuity="Acute", tentorium_hematoma="Right", tentorium_acuity="Acute", R_vertex="NR")),
 ("v1.3", "Acute left SDH. It extends along the falx.", dict(parafalcine_hematoma="Left", parafalcine_acuity="Acute")),
@@ -496,4 +496,9 @@ CASES = [
 ("v1.3", "Large left SDH with downward herniation.", dict(herniation_transtentorial="Yes NS")),
 ("v1.3", "Large left SDH. No central herniation.", dict(herniation_transtentorial="No")),
 ("v1.3", "Large left SDH. Downward herniation of the cerebellar tonsils.", dict(herniation_tonsillar="Yes NS", herniation_transtentorial="NR")),
+# 41 no "Falx" laterality: the convexity SDH's side; a falx-only SDH takes its own side, else NR
+("v1.3", "A small interhemispheric acute subdural hematoma is suspected toward the vertex. This has a maximal thickness of 4 mm. Skull vault appears intact.", dict(laterality="NR", parafalcine_hematoma="Yes NS", parafalcine_acuity="Acute", parafalcine_thickness_mm=4.0, bony_lesion="No")),
+("v1.3", "Acute subdural hematoma along the left side of the falx.", dict(laterality="Left", parafalcine_hematoma="Left")),
+("v1.3", "Right convexity subdural hematoma extending along the falx.", dict(laterality="Right", parafalcine_hematoma="Right")),
+("v1.3", "Bilateral subdural hematomas. Acute subdural hematoma along the falx.", dict(laterality="Bilateral")),
 ]

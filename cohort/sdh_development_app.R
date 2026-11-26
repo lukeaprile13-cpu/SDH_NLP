@@ -106,7 +106,7 @@ side_vars <- function(s) {
 }
 
 VARIABLES <- c(
-  list(v("laterality ", "SDH", c("NR", "Left", "Right", "Bilateral", "Falx"), "Laterality")),
+  list(v("laterality ", "SDH", c("NR", "Left", "Right", "Bilateral"), "Laterality")),
   side_vars("L"),
   side_vars("R"),
   list(
