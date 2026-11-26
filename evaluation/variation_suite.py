@@ -512,4 +512,14 @@ CASES = [
 ("v1.3", "Subdural hematoma along the falx, thickest at the posterior falx.", dict(parafalcine_location="NR")),
 ("v1.3", "Subdural hematoma along the falx, most pronounced anteriorly.", dict(parafalcine_location="NR")),
 ("v1.3", "Subdural hematoma along the anterior falx.", dict(parafalcine_location="Anterior")),
+# 46 a fluid level in a sinus / ventricle sentence is that organ's; "transverse dimension" = thickness;
+#    chronic ischemic change in a vascular territory = old territorial infarct; "intraventricular blood" = IVH
+("v1.3", "Left frontal convexity subdural hematoma. Small fluid level within the right maxillary sinus.", dict(L_internal_appearence="NR", maxillary_sinus="Fluid")),
+("v1.3", "Left subdural hematoma. There is a fluid level within the hematoma.", dict(L_internal_appearence="Layering")),
+("v1.3", "Subdural hematoma along the falx. This is most pronounced along the anterior falx where the maximal transverse dimension measures 6 mm.", dict(parafalcine_thickness_mm=6.0, parafalcine_location="NR")),
+("v1.3", "Left subdural hematoma. Chronic ischemic changes in the left MCA territory.", dict(**{"territorial_ infarct": "Yes Chronic", "microangiopathy": "NR"})),
+("v1.3", "Left subdural hematoma. Mild background chronic ischemic changes.", dict(microangiopathy="Mild")),
+("v1.3", "Left subdural hematoma. Intraventricular blood.", dict(intraventricular_hemorrhage="Yes")),
+("v1.3", "Left subdural hematoma. Blood in the occipital horns of the lateral ventricles.", dict(intraventricular_hemorrhage="Yes", L_internal_appearence="NR")),
+("v1.3", "Left subdural hematoma. No intraventricular blood.", dict(intraventricular_hemorrhage="No")),
 ]
