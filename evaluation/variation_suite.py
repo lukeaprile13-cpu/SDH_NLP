@@ -501,4 +501,10 @@ CASES = [
 ("v1.3", "Acute subdural hematoma along the left side of the falx.", dict(laterality="Left", parafalcine_hematoma="Left")),
 ("v1.3", "Right convexity subdural hematoma extending along the falx.", dict(laterality="Right", parafalcine_hematoma="Right")),
 ("v1.3", "Bilateral subdural hematomas. Acute subdural hematoma along the falx.", dict(laterality="Bilateral")),
+# 42 both tentorium sides named; a falx bleed after a comma keeps no size; "new" is not an age
+("v1.3", "Left subdural hematoma. Increased right and new left tentorial subdural blood.", dict(tentorium_hematoma="Bilateral")),
+("v1.3", "Left subdural hematoma. Right and left tentorial subdural hematomas.", dict(tentorium_hematoma="Bilateral")),
+("v1.3", "Multiple bilateral small subdural hemorrhages, falcotentorial subdural hemorrhage.", dict(L_description="Small", R_description="Small", parafalcine_description="NR", parafalcine_hematoma="Yes NS")),
+("v1.3", "New left subdural hematoma.", dict(laterality="Left", L_acuity="NR")),
+("v1.3", "New chronic left subdural hematoma.", dict(L_acuity="Chronic")),
 ]
